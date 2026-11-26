@@ -27,6 +27,13 @@ if errorlevel 1 (
 if not exist node_modules (
   echo Ilk kurulum yapiliyor, birkac dakika surebilir...
   call npm install || goto :hata
+) else (
+  rem git pull ile yeni paket geldiyse (package-lock.json kurulu paketlerden yeniyse) eksikleri kur
+  node -e "const f=require('fs');const a=f.statSync('package-lock.json').mtimeMs;let b=0;try{b=f.statSync('node_modules/.package-lock.json').mtimeMs}catch{};process.exit(a>b?1:0)" >nul 2>nul
+  if errorlevel 1 (
+    echo Yeni paketler kuruluyor...
+    call npm install --no-audit --no-fund || goto :hata
+  )
 )
 rem Bulten okuyucunun tarayicisi klasorun disinda (kullanici klasorunde) durur; yeni bilgisayarda yoksa kur
 node -e "process.exit(require('fs').existsSync(require('playwright').chromium.executablePath())?0:1)" >nul 2>nul

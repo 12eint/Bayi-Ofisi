@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "bayi": {
+      "command": "node",
+      "args": ["scripts/mcp-server.js"],
+      "env": { "NODE_NO_WARNINGS": "1" }
+    }
+  }
+}

@@ -6,6 +6,7 @@
   <title>Bayi Ofisi</title>
   <link rel="icon" type="image/png" href="bayi.png">
   <link rel="stylesheet" href="styles.css">
+  <script type="importmap">{ "imports": { "three": "/vendor/three/build/three.module.js", "three/addons/": "/vendor/three/examples/jsm/" } }</script>
 </head>
 <body>
   <header class="tabela">
@@ -55,11 +56,12 @@
 
         <h2 class="bolum-baslik">Ofis <small id="ofisDurum"></small>
           <span class="gorunum-sec" role="group" aria-label="Ofis görünümü">
-            <button type="button" data-gorunum="duz">Düz</button><button type="button" data-gorunum="pixel">Pixel</button>
+            <button type="button" data-gorunum="duz">Düz</button><button type="button" data-gorunum="pixel">Pixel</button><button type="button" data-gorunum="3d">3D</button>
           </span>
         </h2>
         <div id="ofis" class="ofis"></div>
         <div id="isoOfis" class="iso-ofis" hidden></div>
+        <div id="ofis3d" class="ofis3d" hidden></div>
 
         <h2 class="bolum-baslik">Fişler <small id="fisOzet"></small></h2>
         <div id="fisSekmeler" class="fis-sekmeler" role="tablist" aria-label="Fişleri ajana göre filtrele"></div>

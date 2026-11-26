@@ -65,7 +65,7 @@ claude.cmd /login
 
 Sonra her seferinde sadece `baslat.cmd` (ya da `npm start`). Sağ üstteki rozet **"● Genel Müdür hazır (Claude)"** yazar; girişin yoksa **"○ Claude girişi yok"** der.
 
-- **Abonelik payı:** Sistem, Claude aboneliğinin 5 saatlik diliminden en fazla **%25** kullanır (Ayarlar'dan değişir). Yalnızca Genel Müdür çalışırken artan yüzde sayılır; senin başka Claude kullanımın bu paydan düşmez. Pay dolunca iş durur, mesajlar sırada bekler, dilim sıfırlanınca kendiliğinden işlenir. Rozet: **"Claude payı: X/25"**.
+- **Abonelik payı:** Sistem, Claude aboneliğinin 5 saatlik diliminden en fazla ayarlanan payı kullanır (varsayılan **%25**, Ayarlar'dan değişir). Yalnızca Genel Müdür çalışırken artan yüzde sayılır; senin başka Claude kullanımın bu paydan düşmez. Pay dolunca iş durur, mesajlar sırada bekler, dilim sıfırlanınca kendiliğinden işlenir. Rozet: **"Claude payı: X/25"**.
 - **Hafıza:** Aynı gün içinde Genel Müdür önceki konuşmaları hatırlar; her yeni gün temiz başlar.
 - **Güvenlik:** Mesajın komut satırına değil standart girişe verilir; Genel Müdür'ün dosya, kabuk ve web araçları kapalıdır, yalnızca bayi araçlarını ve ajanları kullanır.
 - **Sorun giderme:** Son çalışmanın ham çıktısı `data/cli-son-calisma.jsonl` dosyasındadır.
@@ -93,7 +93,7 @@ Sonra her seferinde sadece `baslat.cmd` (ya da `npm start`). Sağ üstteki rozet
 1. **Bülten**: Bülten tek bir güne bağlı değildir; her çekimde sayfada gelen tüm günlerin maçları kendi günüyle kaydedilir. TV'nin üstündeki gün düğmeleriyle (Bugün, Yarın, sonraki günler) istediğin günün maçlarına bakarsın; *Bülteni Yenile* seçili günün sekmesini de açmaya çalışır. Genel Müdür, istenen gün için maç yoksa/bayatsa kendisi çektirir.
    Kuponu hangi güne istersen ("bu akşam için…", "yarın için…", "cumartesi için…") o günün maçlarından hazırlanır; gün söylemezsen bugün (başlamamış maç kaldıysa), yoksa sonraki gün.
 2. **Talimat**: Claude Code'da `/kuponlar Premier Lig ağırlıklı olsun` yaz (API anahtarı varsa sağdaki panelden de olur).
-3. **Ofis**: Ajan masalarında canlı durum ("kupon yazıyor…", "eleştiriyor…") ve konuşma balonları görünür.
+3. **Ofis**: Ajan masalarında canlı durum ("kupon yazıyor…", "eleştiriyor…") ve konuşma balonları görünür. Görünüm üç türlü seçilir: **Düz** (kartlar), **Pixel** (izometrik kıraathane) ve **3D** (Three.js; fareyle sürükleyip döndür, tekerlekle yakınlaş, çift tıkla sıfırla). 3D'de de aynı olaylar oynar: ajan durumları, Gizmo, Risk Kurulu damgası, yazıcıdan çıkan fişler. 3D, tarayıcıda WebGL gerektirir; açılmazsa Pixel kullan.
 4. **Fişler**: Her kupon termal fiş olarak basılır; Çok Bilen Kardeş'in puanı damga olarak görünür, "değiştirilmeli" maçlar taralıdır. Fişler ajana göre sekmelere ayrılır (Tümü, Yaşlı Dayı, Hızlı Genç, Beyaz Hayalci), her sekmede güne göre gruplanır. **Resim (PNG)** veya **PDF / Yazdır** ile indirilebilir.
 5. **Geçmiş**: Maç skorlarını gir; Maç Sonucu, Çifte Şans, Alt/Üst, KG, Tek/Çift, Toplam Gol ve kombinasyonları otomatik değerlendirilir. Diğer bahisleri satırdan elle işaretle. Ajan karnesi isabet oranını ve (varsayımsal) kâr/zararı gösterir.
 

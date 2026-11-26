@@ -137,6 +137,16 @@ button { font: inherit; cursor: pointer; }
 .gorunum-sec button { background: #2a2420; color: #cbbfae; border: 0; padding: 4px 12px; font-size: 12px; font-weight: 700; letter-spacing: .5px; text-transform: none; }
 .gorunum-sec button.aktif { background: var(--sari); color: #1a1512; }
 [hidden] { display: none !important; }
+/* 3D görünüm */
+.ofis3d { position: relative; width: 100%; min-width: 0; overflow: hidden; border-radius: 6px; background: #1a1512; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+.ofis3d canvas { display: block; cursor: grab; touch-action: none; }
+.ofis3d canvas:active { cursor: grabbing; }
+.o3-katman { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.o3-ipucu { position: absolute; right: 8px; bottom: 6px; font: 11px var(--sans); color: #d8ccb8; background: rgba(17,13,11,.6); padding: 2px 7px; border-radius: 4px; pointer-events: none; }
+.ofis3d.dar .iso-etiket { font-size: 8.5px; padding: 0 3px; }
+.ofis3d.dar .iso-etiket span { display: none; }
+.ofis3d.dar .iso-balon { font-size: 10px; max-width: 150px; padding: 3px 6px; }
+.ofis3d.dar .o3-ipucu { display: none; }
 .iso-ofis { position: relative; display: flex; justify-content: center; width: 100%; min-width: 0; overflow: hidden; }
 .iso-ofis canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
 .iso-katman { position: absolute; top: 0; left: 50%; transform: translateX(-50%); pointer-events: none; }

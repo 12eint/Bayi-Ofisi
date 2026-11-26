@@ -139,7 +139,7 @@ async function bultenYukle() {
   if (sayfa.length) sayfalar.push(sayfa);
   S.tvSayfalar = sayfalar; S.tvSayfa = 0;
   tvCiz();
-  iso?.setMatches(S.maclar);
+  sahne('setMatches', S.maclar);
 }
 function oran(m, bahis, secim) { const o = m.oranlar.find(x => x.bahis === bahis && x.secim === secim); return o ? o.oran.toFixed(2) : '–'; }
 function tvCiz() {
@@ -190,23 +190,43 @@ function ofisCiz() {
       <div class="durum">masada</div><div class="aralik">${esc(aralikYazi(k))}</div></div>`;
   }).join('');
 }
-/* ---------- Görünüm: Düz / Pixel ---------- */
-let iso = null;
+/* ---------- Görünüm: Düz / Pixel / 3D ---------- */
+let iso = null, o3d = null, o3dYukleniyor = null;
+// Ofis olayları açık olan tüm sahnelere gider (pixel ve 3D aynı API'yi kullanır)
+const sahne = (m, ...a) => { iso?.[m]?.(...a); o3d?.[m]?.(...a); };
 const gorunumOku = () => { try { return localStorage.getItem('ofisGorunum') || 'pixel'; } catch { return 'pixel'; } };
-function gorunumUygula(g) {
+async function gorunumUygula(g) {
+  if (!['duz', 'pixel', '3d'].includes(g)) g = 'pixel';
   try { localStorage.setItem('ofisGorunum', g); } catch { /* depolama kapalı olabilir */ }
   $$('[data-gorunum]').forEach(b => b.classList.toggle('aktif', b.dataset.gorunum === g));
-  $('#ofis').hidden = g === 'pixel';
+  $('#ofis').hidden = g !== 'duz';
   $('#isoOfis').hidden = g !== 'pixel';
+  $('#ofis3d').hidden = g !== '3d';
   if (g === 'pixel') {
     if (!iso) { iso = createIsoOffice($('#isoOfis')); iso.setKadro(S.kadro); iso.setMatches(S.maclar); iso.setTicketCount(S.kuponlar.length); window.bayiIso = iso; }
     iso.start();
   } else iso?.stop();
+  if (g === '3d') {
+    try {
+      if (!o3d) {
+        // Three.js yalnızca 3D seçilince yüklenir
+        o3dYukleniyor ??= import('./ofis3d.js').then(({ createOfis3D }) => {
+          const o = createOfis3D($('#ofis3d')); o.setKadro(S.kadro); o.setMatches(S.maclar); o.setTicketCount(S.kuponlar.length);
+          return o;
+        });
+        o3d = await o3dYukleniyor; window.bayi3d = o3d;
+      }
+      if (gorunumOku() === '3d') o3d.start();
+    } catch (e) {
+      console.error('3D görünüm açılamadı', e);
+      $('#ofis3d').innerHTML = '<p class="bos">3D görünüm bu tarayıcıda açılamadı (WebGL kapalı olabilir). Pixel görünümü kullan.</p>';
+    }
+  } else o3d?.stop();
 }
 $$('[data-gorunum]').forEach(b => b.addEventListener('click', () => gorunumUygula(b.dataset.gorunum)));
 
 function masaDurum(ajan, durum, calisiyor) {
-  iso?.setStatus(ajan, durum, calisiyor);
+  sahne('setStatus', ajan, durum, calisiyor);
   const m = $(`#masa-${ajan}`); if (!m) return;
   $('.durum', m).textContent = String(durum).replace(/\.\.\.$/, '');
   if (calisiyor !== undefined) m.classList.toggle('calisiyor', !!calisiyor);
@@ -215,7 +235,7 @@ function masaDurum(ajan, durum, calisiyor) {
 }
 const balonZaman = {};
 function balon(ajan, mesaj) {
-  iso?.bubble(ajan, mesaj);
+  sahne('bubble', ajan, mesaj);
   const m = $(`#masa-${ajan}`); if (!m) return;
   $('.balon', m)?.remove();
   const b = document.createElement('div'); b.className = 'balon'; b.textContent = mesaj; m.appendChild(b);
@@ -226,7 +246,7 @@ function balon(ajan, mesaj) {
 async function kuponlariYukle() {
   // Bugün ve sonraki günlerin aktif fişleri (geçmiş günler Geçmiş sekmesinde)
   S.kuponlar = await api(`/api/kuponlar?min_tarih=${S.durum?.bugun ?? ''}`);
-  iso?.setTicketCount(S.kuponlar.length);
+  sahne('setTicketCount', S.kuponlar.length);
   fisleriCiz();
 }
 // Model olasılığı gösterimi: küçük olasılıklarda ondalık basamak artar (%0.42 gibi)
@@ -457,8 +477,8 @@ function olaylariDinle() {
       case 'merhaba': calismaDurumu(e.calisiyor); break;
       case 'ajan_durum': masaDurum(e.ajan, e.durum, e.calisiyor); break;
       case 'balon': balon(e.ajan, e.mesaj); break;
-      case 'risk': iso?.riskKarar(e); break;
-      case 'kupon': iso?.printTicket(); kuponlariYukle(); break;
+      case 'risk': sahne('riskKarar', e); break;
+      case 'kupon': sahne('printTicket'); kuponlariYukle(); break;
       case 'puan': kuponlariYukle(); break;
       case 'bulten': bultenYukle(); durumYukle(); break;
       case 'oturum':

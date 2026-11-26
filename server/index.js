@@ -29,6 +29,8 @@ const app = express();
 app.use(express.json({ limit: '25mb' }));
 // Arayüz dosyaları önbelleğe alınmasın: güncellemeler sayfa yenilenince hemen görünsün
 app.use(express.static(path.join(ROOT, 'public'), { etag: false, lastModified: false, setHeaders: (res) => res.set('Cache-Control', 'no-store') }));
+// 3D görünüm: Three.js yerel paketten (internet gerekmez)
+app.use('/vendor/three', express.static(path.join(ROOT, 'node_modules/three'), { maxAge: '7d' }));
 app.get('/vendor/html2canvas.min.js', (req, res) => res.sendFile(path.join(ROOT, 'node_modules/html2canvas/dist/html2canvas.min.js')));
 
 const wrap = (fn) => async (req, res) => {

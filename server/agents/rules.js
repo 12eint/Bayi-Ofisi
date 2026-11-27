@@ -184,7 +184,13 @@ export function saveCoupon(k, { oturumId, risk, aciklama }) {
 export function getCoupon(id) {
   const k = db.prepare('SELECT * FROM kuponlar WHERE id = ?').get(id);
   if (!k) return null;
-  k.secimler = db.prepare('SELECT * FROM kupon_secimleri WHERE kupon_id = ? ORDER BY saat, id').all(id);
+  // biten maçın skoru (ve biliniyorsa ilk yarı) fişte gösterilsin diye bültendeki maçtan alınır
+  k.secimler = db.prepare(`SELECT s.*,
+      (SELECT MAX(m.skor_ev) FROM maclar m WHERE m.mac_kodu = s.mac_kodu AND m.gun = ?) skor_ev,
+      (SELECT MAX(m.skor_dep) FROM maclar m WHERE m.mac_kodu = s.mac_kodu AND m.gun = ?) skor_dep,
+      (SELECT MAX(m.iy_ev) FROM maclar m WHERE m.mac_kodu = s.mac_kodu AND m.gun = ?) iy_ev,
+      (SELECT MAX(m.iy_dep) FROM maclar m WHERE m.mac_kodu = s.mac_kodu AND m.gun = ?) iy_dep
+    FROM kupon_secimleri s WHERE s.kupon_id = ? ORDER BY s.saat, s.id`).all(k.tarih, k.tarih, k.tarih, k.tarih, id);
   k.degistirilmeli = k.degistirilmeli ? JSON.parse(k.degistirilmeli) : [];
   k.risk_uyarilari = k.risk_uyarilari ? JSON.parse(k.risk_uyarilari) : [];
   k.yedekler = k.yedekler ? JSON.parse(k.yedekler) : [];

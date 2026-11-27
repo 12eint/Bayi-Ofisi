@@ -285,6 +285,7 @@ button { font: inherit; cursor: pointer; }
 .canli-satir.tutmuyor { border-color: #c62828; color: #b02020; }
 .canli-satir.kesin-tuttu { border-color: #0a7a3e; background: rgba(10,122,62,.12); color: #0a6a36; font-weight: 700; }
 .canli-satir.kesin-yatti { border-color: #c62828; background: rgba(198,40,40,.1); color: #b02020; font-weight: 700; }
+.skor-etiket { display: inline-block; padding: 0 5px; margin-left: 4px; border: 1px solid #554a40; border-radius: 3px; font-family: var(--mono); font-size: 11px; }
 .canli-satir.canli-yok { color: #888; border-color: #ccc; }
 .canli-nokta { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #e53935; margin-right: 5px; vertical-align: middle; animation: canliYan 1.2s infinite; }
 @keyframes canliYan { 50% { opacity: .25; } }

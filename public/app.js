@@ -287,7 +287,12 @@ async function canliYukle() {
 }
 function canliMacOf(k, s) { return S.canli?.maclar?.[`${k.tarih}|${s.mac_kodu}`] ?? null; }
 function canliSatir(k, s) {
-  if (s.sonuc) return '';
+  if (s.sonuc) {
+    if (s.skor_ev == null) return '';
+    const iy = s.iy_ev != null ? ` <small>(İY ${s.iy_ev}-${s.iy_dep})</small>` : '';
+    const ne = s.sonuc === 'tuttu' ? 'TUTTU' : s.sonuc === 'yatti' ? 'YATTI' : 'İADE';
+    return `<div class="canli-satir ${s.sonuc === 'tuttu' ? 'kesin-tuttu' : s.sonuc === 'yatti' ? 'kesin-yatti' : ''}"><span>MS · <b>${s.skor_ev}-${s.skor_dep}</b>${iy}</span><span>${ne}</span></div>`;
+  }
   const m = canliMacOf(k, s); if (!m) return '';
   if (m.bulunamadi) return '<div class="canli-satir canli-yok">canlı skor yok</div>';
   const c = S.canli.secimler?.[s.id];
@@ -297,14 +302,15 @@ function canliSatir(k, s) {
   const sinif = !c ? '' : c.tutuyor ? (c.kesin ? 'kesin-tuttu' : 'tutuyor') : (c.kesin ? 'kesin-yatti' : 'tutmuyor');
   return `<div class="canli-satir ${sinif}"><span>${m.tamamlandi ? '' : '<i class="canli-nokta"></i>'}${esc(dk)} · <b>${m.skor[0]}-${m.skor[1]}</b>${iy}</span><span>${ne}</span></div>`;
 }
+// Kuponun tüm maçları üzerinden: biten ve tutan + oynanan ve şu an tutan / toplam maç (yalnızca canlı maç varken gösterilir)
 function canliOzet(k) {
   let canli = 0, tutan = 0;
   for (const s of k.secimler) {
-    if (s.sonuc) continue;
+    if (s.sonuc) { if (s.sonuc === 'tuttu' || s.sonuc === 'iade') tutan++; continue; }
     const c = S.canli?.secimler?.[s.id]; if (!c) continue;
     canli++; if (c.tutuyor) tutan++;
   }
-  return canli ? { canli, tutan } : null;
+  return canli ? { toplam: k.secimler.length, tutan } : null;
 }
 // Model olasılığı gösterimi: küçük olasılıklarda ondalık basamak artar (%0.42 gibi)
 function yuzdeYaz(p) {
@@ -361,7 +367,7 @@ function fisOzetHtml(k) {
       <span class="fo-satir"><span>Tutar</span><b>${tl(k.tutar)}</b></span>
       <span class="fo-satir fo-kazanc"><span>Olası kazanç</span><b>${tl(k.olasi_kazanc)}</b></span>
       ${k.model_olasilik != null ? `<span class="fo-satir" title="Poisson modeline göre kuponun tutma olasılığı (oranlardan hesaplanır)"><span>Model tutma</span><b>${yuzdeYaz(k.model_olasilik)}</b></span>` : ''}
-      ${(() => { const o = canliOzet(k); return o ? `<span class="fo-canli${o.tutan === o.canli ? ' iyi' : ''}"><i class="canli-nokta"></i>Canlı: ${o.tutan}/${o.canli} maç şu an tutuyor</span>` : ''; })()}
+      ${(() => { const o = canliOzet(k); return o ? `<span class="fo-canli${o.tutan === o.toplam ? ' iyi' : ''}"><i class="canli-nokta"></i>Canlı: ${o.tutan}/${o.toplam} maç şu an tutuyor</span>` : ''; })()}
       ${k.risk_uyarilari?.length ? `<span class="fo-risk" title="${esc(k.risk_uyarilari.join(' · '))}">⚠ Nikah Dairesi: ${k.risk_uyarilari.length} uyarı</span>` : ''}
       <span class="fo-ac">Fişi aç ▸</span>
     </button>`;
@@ -722,7 +728,7 @@ async function gecmisYukle() {
     <div class="kart"><table class="liste"><tr><th>Fiş</th><th>Ajan</th><th>Oran</th><th>Tutar</th><th>Puan</th><th>Sonuç</th><th>Ödeme</th><th>Seçimler</th></tr>
     ${d.kuponlar.map(k => `<tr><td>#${k.id}</td><td>${esc(ad(k.ajan))}</td><td class="num">${k.toplam_oran}</td><td class="num">${tl(k.tutar)}</td><td class="num">${k.puan ?? '-'}</td>
       <td class="${k.sonuc === 'kazandi' ? 'pos' : k.sonuc === 'kaybetti' ? 'neg' : ''}">${esc(k.sonuc ?? 'bekliyor')}</td><td class="num">${tl(k.odeme)}</td>
-      <td>${k.secimler.map(s => `<div>${esc(s.mac_kodu)} ${esc(s.mac_adi)} · ${esc(s.bahis)}: <b>${esc(s.secim)}</b> @${s.oran}
+      <td>${k.secimler.map(s => `<div>${esc(s.mac_kodu)} ${esc(s.mac_adi)} · ${esc(s.bahis)}: <b>${esc(s.secim)}</b> @${s.oran}${s.skor_ev != null ? ` <span class="skor-etiket">${s.skor_ev}-${s.skor_dep}${s.iy_ev != null ? ` (İY ${s.iy_ev}-${s.iy_dep})` : ''}</span>` : ''}
         <select data-secim="${s.id}"><option value="">?</option>${['tuttu', 'yatti', 'iade'].map(v => `<option ${s.sonuc === v ? 'selected' : ''}>${v}</option>`).join('')}</select></div>`).join('')}</td></tr>`).join('')}
     </table></div>`).join('');
 }

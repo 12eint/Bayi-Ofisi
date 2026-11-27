@@ -65,7 +65,10 @@
 
         <h2 class="bolum-baslik">Fişler <small id="fisOzet"></small></h2>
         <div id="fisSekmeler" class="fis-sekmeler" role="tablist" aria-label="Fişleri ajana göre filtrele"></div>
-        <div id="fisler" class="fisler"><p class="bos">Henüz fiş yok. Sağdaki panelden Genel Müdür'e talimat ver.</p></div>
+        <div id="fisler" class="fisler"><p class="bos">Henüz fiş yok. Sağdaki panelden Harambe'ye talimat ver.</p></div>
+
+        <h2 class="bolum-baslik">Spor Toto <small id="totoOzet"></small></h2>
+        <div id="toto" class="toto"><p class="bos">Yükleniyor…</p></div>
       </section>
 
       <!-- ============ BÜLTEN ============ -->
@@ -121,7 +124,10 @@
             </label>
             <label>Oturum başı Claude bütçesi (USD, yalnızca API anahtarı modu)<input type="number" step="0.5" min="0.5" name="oturumButceUsd"></label>
             <label>Abonelik payı (5 saatlik dilimin en fazla %'si)<input type="number" step="1" min="1" max="100" name="aboneligeSinirYuzde"></label>
-            <label>Genel Müdür kutu kontrol aralığı (dk; değişince /nobet yeniden)<input type="number" step="1" min="1" max="60" name="nobetAralikDk"></label>
+            <label>Harambe kutu kontrol aralığı (dk; değişince /nobet yeniden)<input type="number" step="1" min="1" max="60" name="nobetAralikDk"></label>
+            <label>Spor Toto en fazla tutar (TL, haftalık öneri başına)<input type="number" step="1" min="1" name="totoMaxTutar"></label>
+            <label>Spor Toto kolon ücreti (TL)<input type="number" step="0.5" min="0.5" name="totoKolonUcreti"></label>
+            <label class="onay"><input type="checkbox" name="totoAktif"> Spor Totocu aktif</label>
           </div>
           <h2>Ajanlar</h2>
           <div id="ajanAyarlari" class="ajan-ayar-izgara"></div>
@@ -132,12 +138,23 @@
       <!-- ============ GEÇMİŞ ============ -->
       <section id="sekme-gecmis" class="sekme-icerik">
         <div class="kart">
+          <h2>Genel istatistik <small id="genelOzet"></small></h2>
+          <p class="ipucu">Bahisçilerin bugüne kadar kupona yazdığı maçlar ve sonuçları. Revize edilip yerine yenisi yazılan ve iptal edilen kuponlar sayılmaz; isabet yalnızca sonuçlanan maçlar üzerinden hesaplanır.</p>
+          <div class="tablo-kap"><table class="liste" id="genelIstatistik"></table></div>
+        </div>
+        <div class="kart">
           <h2>Ajan karnesi</h2>
           <div class="tablo-kap"><table class="liste" id="karne"></table></div>
         </div>
         <div class="kart">
+          <h2>Tutma karnesi <small id="tutmaOzet"></small></h2>
+          <p class="ipucu">Sonuçlanan seçimlerde modeller "%X tutar" dediğinde gerçekte yüzde kaç tuttu? Tahmin ile gerçek ne kadar yakınsa model o kadar güvenilir. Brier skoru: düşük = daha isabetli. Az veride (birkaç düzine seçim) sonuçlar yanıltıcı olabilir.</p>
+          <div id="tutmaKarnesi"></div>
+        </div>
+        <div class="kart">
           <h2>Sonuç bekleyen maçlar</h2>
-          <p class="ipucu">Skoru gir; Maç Sonucu, Çifte Şans, Alt/Üst, KG, Tek/Çift, Toplam Gol ve kombinasyonları otomatik değerlendirilir. Diğerlerini fiş satırından elle işaretle.</p>
+          <p class="ipucu">Bilinen liglerde sonuçlar saatte bir ESPN'den kendiliğinden gelir (ilk yarı skoru dahil). Gelmeyenlerin skorunu elle gir; ilk yarı skorunu da yazarsan İY, İY/MS, 2. yarı ve iki yarıda KG bahisleri de otomatik değerlendirilir.</p>
+          <div class="satir"><button id="btnOtoSonuc" class="btn sari">Sonuçları ESPN'den getir</button> <span id="otoSonucDurum" class="ipucu"></span></div>
           <div class="tablo-kap"><table class="liste" id="bekleyen"></table></div>
         </div>
         <div id="gecmisGunler"></div>
@@ -148,7 +165,7 @@
     <aside class="gm-panel">
       <div class="gm-baslik">
         <div class="gm-avatar">🎩</div>
-        <div><strong>Genel Müdür</strong><small id="gmDurum">masada</small></div>
+        <div><strong>Harambe</strong><small id="gmDurum">masada</small></div>
         <button id="btnDurdur" class="btn kucuk kirmizi" hidden>Durdur</button>
       </div>
       <div id="sohbet" class="sohbet"></div>
@@ -158,7 +175,7 @@
           <button type="button" data-hizli="Yarın için kuponları hazırla.">Yarın kuponları</button>
           <button type="button" data-hizli="Bugünkü kuponların durumunu kısaca özetle.">Özet</button>
         </div>
-        <textarea id="sohbetGirdi" rows="2" placeholder="Genel Müdür'e yaz… (Enter gönderir)"></textarea>
+        <textarea id="sohbetGirdi" rows="2" placeholder="Harambe'ye yaz… (Enter gönderir)"></textarea>
         <button class="btn sari" type="submit">Gönder</button>
       </form>
     </aside>

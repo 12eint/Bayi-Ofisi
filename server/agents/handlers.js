@@ -5,10 +5,19 @@ import { db, tomorrow, istanbulDate, kvSet, kvGet, nowIso, butceKontrol, butceDo
 import { getSettings } from '../settings.js';
 import { bulletinStatus, gunBulteni, listMatches, varsayilanGun, bultenGunleri } from '../bulletin/store.js';
 import { refreshBulletin } from '../bulletin/index.js';
+import { detaylariCek, IKI_YARI_KG } from '../bulletin/detay.js';
+import { espnLig, takimFormu } from '../veri/espn.js';
+import { tutmaKarnesiYazi } from '../stats.js';
+import { tabanPuan, tabanYazi, revioKarnesi, PUAN_ESNEKLIK } from './puan.js';
+import { totoProgrami, totoAnaliz, totoAnalizYazi, totoDogrula, totoKaydet, totoKuponlari, totoKuponYazi } from '../toto.js';
+import { bagimsizModel, bagimsizYazi, bagimsizHarita } from '../veri/bagimsiz.js';
 import { validateCoupon, saveCoupon, listCoupons, couponText, getCoupon, dailyTotal } from './rules.js';
-import { AGENTS } from './definitions.js';
+import { AGENTS, KUPON_AJANLARI } from './definitions.js';
 import { macModeliGetir, secimModeli, lambdaYazi, yuzde, degerYazi } from '../model/index.js';
 import { emit as defaultEmit } from '../events.js';
+
+const detayYazi = (d) => d.hata ? `Maç detayı okunamadı: ${d.hata}`
+  : `Maç detayı: ${d.denenen} aday maç denendi, ${d.okunan} maçın detayı okundu, ${d.eklenen_oran} yeni oran eklendi; ${d.iki_yari_kg} maçta "${IKI_YARI_KG}: Evet / Evet" oranı var.` + (d.durdu ? ` DURDU: ${d.durdu}` : '');
 
 const POPULER = [/^Maç Sonucu$/, /^Çifte Şans$/, /^Alt\/Üst (1\.5|2\.5|3\.5)$/, /^Karşılıklı Gol$/, /^1\. Yarı Sonucu$/, /^Handikaplı Maç Sonucu/];
 const KISA = { 'Maç Sonucu': 'MS', 'Çifte Şans': 'ÇŞ', 'Karşılıklı Gol': 'KG', '1. Yarı Sonucu': 'İY' };
@@ -17,14 +26,14 @@ const kisalt = (b) => KISA[b] ?? b.replace('Alt/Üst ', 'AÜ').replace('Handikap
 const formCache = new Map();
 const text = (s, isError = false) => ({ text: s, isError });
 
-export const AJAN_ENUM = ['yasli-dayi', 'hizli-genc', 'beyaz-hayalci', 'cok-bilen-kardes', 'genel-mudur'];
-export const KUPON_AJAN_ENUM = ['yasli-dayi', 'hizli-genc', 'beyaz-hayalci'];
+export const AJAN_ENUM = [...Object.keys(AGENTS), 'genel-mudur'];
+export const KUPON_AJAN_ENUM = KUPON_AJANLARI;
 
 // Hedef gün: patron hangi günü istediyse o. Verilmezse bugün (başlamamış maç varsa), yoksa bültendeki sonraki gün.
 const hedefTarih = (tarih) => tarih || varsayilanGun();
 // Risk kurulu mesajlarından sahnedeki balon için kısa etiketler
 const RISK_ETIKET = [[/seçimin model değeri|Kötü değerli/, 'kötü seçim'], [/ortalama (model )?değer/i, 'değer düşük'],
-  [/Lig yoğunluğu/, 'tek lig'], [/kuponda olabilir/, 'aynı maç çok kuponda'], [/Diğer kuponlarla ortak/, 'ortak maç']];
+  [/Lig yoğunluğu/, 'tek lig'], [/kuponda olabilir/, 'aynı maç çok kuponda'], [/Diğer kuponlarla ortak/, 'ortak maç'], [/çelişiyor/, 'iki model çelişiyor']];
 const riskEtiketleri = (mesajlar) => [...new Set(mesajlar.flatMap(m => RISK_ETIKET.filter(([re]) => re.test(m)).map(([, e]) => e)))];
 /** Günün maçlarını içeren en son çekim */
 const hedefBulten = (tarih) => gunBulteni(hedefTarih(tarih));
@@ -66,6 +75,8 @@ export function buildHandlers(ctx = {}) {
         const s = getSettings();
         return text(`${t} (${gunAdi(t)}) | çekim #${st.id} | kaynak ${st.kaynak} | çekilme ${st.cekilme_zamani} (${st.yas_saat} saat önce${st.yas_saat > s.bultenMaxYasSaat ? ' – BAYAT' : ''}) | ${st.mac_sayisi} maç, ${st.baslamamis} tanesi başlamadı` +
           (st.baslamamis ? '' : ' – KUPONA UYGUN MAÇ KALMADI') +
+          `
+İki yarıda KG (Evet / Evet) oranı olan başlamamış maç: ${db.prepare("SELECT COUNT(DISTINCT m.id) n FROM maclar m JOIN oranlar o ON o.mac_id = m.id WHERE m.bulten_id = ? AND m.gun = ? AND o.bahis = ? AND o.secim = 'Evet / Evet' AND (m.baslama IS NULL OR m.baslama > ?)").get(st.id, t, IKI_YARI_KG, new Date().toISOString()).n} (yoksa bulten_detay_cek)` +
           `\nLigler: ${st.ligler.slice(0, 40).map(l => `${l.lig} (${l.n})`).join(', ')}` + (st.not ? `\nNot: ${st.not}` : '') + diger);
       },
     },
@@ -79,7 +90,24 @@ export function buildHandlers(ctx = {}) {
         emit('bulten', { sonuc: r });
         if (!r.ok) return text(`ÇEKİM BAŞARISIZ: ${r.hata}`, true);
         return text(`Bülten çekildi (#${r.bulten_id}): ${r.mac_sayisi} maç, ${r.hatali} hatalı satır. Günlere göre: ${Object.entries(r.gunler).map(([g, n]) => `${g} ${n}`).join(', ')}.` +
-          (r.uyari ? `\nUYARI: ${r.uyari}` : ''), !r.hedef_gun_mac);
+          (r.detay ? `\n${detayYazi(r.detay)}` : '') + (r.uyari ? `\nUYARI: ${r.uyari}` : ''), !r.hedef_gun_mac);
+      },
+    },
+
+    bulten_detay_cek: {
+      desc: 'Genel Müdür içindir: bülten zaten tazeyse (yeniden çekim gerekmiyorsa) ama "1. Yarı ve 2. Yarıda Karşılıklı Gol Olur" gibi detay pazarları eksikse, modele göre en uygun aday maçların detayını iddaa\'dan okur. Aynı gün için saatte en fazla bir kez.',
+      shape: { tarih: TARIH },
+      run: async ({ tarih }) => {
+        const gun = hedefTarih(tarih);
+        const b = gunBulteni(gun);
+        if (!b) return text(`${gun} için bültende maç yok. Önce bulteni_cek.`, true);
+        const anahtar = `detay_son_${gun}`; const son = kvGet(anahtar);
+        if (son && Date.now() - new Date(son).getTime() < 60 * 60000) return text(`${gun} için detay ${Math.round((Date.now() - new Date(son).getTime()) / 60000)} dk önce okundu; saatte en fazla bir kez okunur (siteye yük bindirmemek için).`, true);
+        kvSet(anahtar, nowIso());
+        emit('ajan_durum', { ajan: 'genel-mudur', durum: 'maç detayları okunuyor...' });
+        const r = await detaylariCek({ bultenId: b.id, gun });
+        emit('bulten', { sonuc: { ok: true, detay: r } });
+        return text(detayYazi(r), !!r.durdu && !r.okunan);
       },
     },
 
@@ -133,15 +161,75 @@ export function buildHandlers(ctx = {}) {
         }
         const { model } = macModeliGetir(m.id);
         const ozet = model ? `Model: λ ev ${model.lh} / dep ${model.la}, beraberlik düzeltmesi ${model.delta}, ilk yarı gol payı ${model.ilkYariPayi}. [olasılık değer] = model tutma olasılığı ve olasılık×oran−1; "~" = iki yarıya bağlı bahis, model burada yaklaşık.` : 'Model kurulamadı (MS oranı eksik).';
-        return text(`${m.mac_kodu} | ${m.saat} | ${m.lig} | ${m.ev} - ${m.deplasman}\n${ozet}\n` + Object.entries(grp).map(([k, v]) => `${k}: ${v.join('  ')}`).join('\n'));
+        let bag = '';
+        try { const bm = await bagimsizModel(m); bag = bm ? `\n${bagimsizYazi(bm)}` : (espnLig(m.lig) ? '\nBağımsız model: takımlar ESPN puan durumunda eşleşmedi.' : ''); } catch { /* ESPN'e ulaşılamadı */ }
+        return text(`${m.mac_kodu} | ${m.saat} | ${m.lig} | ${m.ev} - ${m.deplasman}\n${ozet}${bag}\n` + Object.entries(grp).map(([k, v]) => `${k}: ${v.join('  ')}`).join('\n'));
       },
     },
 
-    takim_formu: {
-      desc: 'Takımın son maç sonuçları (form) – API-Football anahtarı .env içinde varsa. Takım adını İngilizce yazmak eşleşmeyi kolaylaştırır.',
-      shape: { takim: z.string() },
+    toto_programi: {
+      desc: 'Spor Totocu içindir: haftanın Spor Toto programı (15 maç), halkın oynama yüzdeleri, iddaa MS oranı ve oran modeli, ESPN bağımsız modeli; kolon ücreti ve tutar sınırı.',
+      shape: {},
       readOnly: true,
-      run: async ({ takim }) => text(await teamForm(takim)),
+      run: async () => {
+        try {
+          const p = await totoProgrami();
+          return text(totoAnalizYazi(p, await totoAnaliz(p)));
+        } catch (e) { return text(`Spor Toto programı okunamadı: ${e.message}`, true); }
+      },
+    },
+
+    toto_teklif_et: {
+      desc: 'Spor Totocu içindir: 15 maçın HEPSİ için tahmin gönderir (secim: "1", "0", "2" ya da sistemli "10", "12", "02", "102"). Sistem kolon sayısını ve tutarı hesaplar; tutar sınırını aşarsa kaydetmez. Revize için revize_edilen_toto_id ver.',
+      shape: {
+        ajan: z.literal('spor-totocu'),
+        secimler: z.array(z.object({ no: z.number().int().min(1).max(15), secim: z.string().describe('"1", "0", "2", "10", "12", "02" ya da "102"'), gerekce: z.string() })).min(1),
+        risk: z.string().optional(), aciklama: z.string().describe('1-2 cümle, kendi ağzınla'),
+        revize_edilen_toto_id: z.number().int().optional(),
+      },
+      run: async (p) => {
+        let program;
+        try { program = await totoProgrami(); } catch (e) { return text(`Spor Toto programı okunamadı: ${e.message}`, true); }
+        const v = totoDogrula(p, { program, analiz: await totoAnaliz(program) });
+        if (!v.ok) { emit('ajan_durum', { ajan: 'spor-totocu', durum: 'kolon reddedildi, düzeltiyor...' }); return text(`REDDEDİLDİ:\n- ${v.hatalar.join('\n- ')}`, true); }
+        const id = totoKaydet(v.kupon, { oturumId: oid() });
+        const k = totoKuponlari({ donem: program.donem }).find(x => x.id === id);
+        emit('toto', { kupon: k, oturum_id: oid() });
+        emit('ajan_durum', { ajan: 'spor-totocu', durum: `toto #${id} teslim edildi` });
+        return text(`KABUL: ${totoKuponYazi(k)}`);
+      },
+    },
+
+    toto_kuponlari: {
+      desc: 'Bu haftanın (ya da verilen dönemin) Spor Toto önerilerini listeler: kolon, tutar, tahminler ve biten maçların sonuçları.',
+      shape: { donem: z.number().int().optional() },
+      readOnly: true,
+      run: async ({ donem }) => {
+        let d = donem; if (!d) { try { d = (await totoProgrami()).donem; } catch { /* son dönem */ } }
+        const ks = totoKuponlari({ donem: d });
+        return text(ks.length ? ks.map(totoKuponYazi).join('\n\n') : `${d ?? 'Bu'} dönem için Spor Toto önerisi yok.`);
+      },
+    },
+
+    revio_karnesi: {
+      desc: 'Hakan Revio içindir: kendi geçmişin – verdiğin puanların dağılımı, puana göre tutan kupon sayısı ve "değiştirilmeli" işaretlediğin maçların tutma oranı. Puanlamaya başlamadan önce bir kez çağır.',
+      shape: {},
+      readOnly: true,
+      run: async () => text(revioKarnesi()),
+    },
+
+    tutma_karnesi: {
+      desc: 'Harambe içindir: sonuçlanan seçimlerde modellerin tahmini ile gerçek tutma oranını ajan, bahis türü ve olasılık dilimine göre verir; oran modeli ile bağımsız modelin isabetini (Brier) kıyaslar. Patron sorarsa ya da raporda performans değerlendirmesi gerekirse kullan.',
+      shape: {},
+      readOnly: true,
+      run: async () => text(tutmaKarnesiYazi()),
+    },
+
+    takim_formu: {
+      desc: 'Takım formu (ESPN): mac_kodu verirsen o maçın İKİ takımının son 6 maçı (skor, iç/dış saha, puan durumu) ve oranlardan bağımsız güç modeli gelir. Yalnızca takim verirsen lig (bültendeki lig adı) de ver. ESPN\'de olmayan liglerde veri yoktur; o zaman gerekçeni oranlara dayandır ve bunu söyle.',
+      shape: { mac_kodu: z.string().optional(), takim: z.string().optional(), lig: z.string().optional().describe('Bültendeki lig adı, ör. "İngiltere Premier Lig"'), tarih: TARIH },
+      readOnly: true,
+      run: async ({ mac_kodu, takim, lig, tarih }) => text(await takimFormuYazi({ mac_kodu, takim, lig, gun: hedefTarih(tarih) })),
     },
 
     kupon_teklif_et: {
@@ -162,10 +250,13 @@ export function buildHandlers(ctx = {}) {
         // Revizyonda tarih verilmezse eski kuponun günü kullanılır
         const eski = !p.tarih && p.revize_edilen_kupon_id ? getCoupon(p.revize_edilen_kupon_id) : null;
         const gun = p.tarih || eski?.tarih || hedefTarih();
-        const v = validateCoupon(p, { bulten: gunBulteni(gun), gun, settings: s, oturumId: oid() });
+        const bulten = gunBulteni(gun);
+        const maclar = bulten ? listMatches(bulten.id, { gun, kodlar: (p.secimler ?? []).map(x => String(x.mac_kodu)) }) : [];
+        const bagimsiz = await bagimsizHarita(maclar);   // ESPN puan durumu önbellekte; çelişki ve "yalnızca verili" kuralları için
+        const v = validateCoupon(p, { bulten, gun, settings: s, oturumId: oid(), bagimsiz });
         if (!v.ok) {
           emit('ajan_durum', { ajan: p.ajan, durum: 'kupon reddedildi, düzeltiyor...' });
-          const riskRet = v.hatalar.filter(h => h.startsWith('Risk kurulu:'));
+          const riskRet = v.hatalar.filter(h => h.startsWith('Nikah Dairesi'));
           if (riskRet.length) emit('risk', { ajan: p.ajan, durum: 'ret', etiketler: riskEtiketleri(riskRet) });
           return text(`REDDEDİLDİ:\n- ${v.hatalar.join('\n- ')}`, true);
         }
@@ -177,7 +268,7 @@ export function buildHandlers(ctx = {}) {
         return text(`KABUL: Kupon #${id} kaydedildi. Toplam oran ${k.toplam_oran}, ${k.tutar} TL → olası ${k.olasi_kazanc} TL.` + (k.revize_of ? ` (#${k.revize_of} yerine)` : '') +
           (k.model_olasilik != null ? `\nModel: tutma olasılığı ${yuzde(k.model_olasilik, 2)}, beklenen getiri ${degerYazi(k.beklenen_getiri)}.` : '') +
           `\nSeçimler: ${k.secimler.map(s => `${s.mac_kodu} ${yuzde(s.model_olasilik)} ${degerYazi(s.deger)}`).join(' · ')}` +
-          (k.risk_uyarilari.length ? `\nRisk kurulu uyarıları (kupon kabul edildi; istersen revize et): ${k.risk_uyarilari.join(' · ')}` : ''));
+          (k.risk_uyarilari.length ? `\nNikah Dairesi uyarıları (kupon kabul edildi; istersen revize et): ${k.risk_uyarilari.join(' · ')}` : ''));
       },
     },
 
@@ -188,6 +279,7 @@ export function buildHandlers(ctx = {}) {
         bahis: z.string().optional().describe('Bahis adında geçen metin, örn. "Maç Sonucu", "Alt/Üst"'),
         lig: z.string().optional(),
         limit: z.number().int().optional().describe('Varsayılan 30'),
+        verili_ligler: z.boolean().optional().describe('true ise yalnızca bağımsız verisi (ESPN) olabilecek liglerin maçları (Öz23 ve 07 Mal Ahmet için)'),
         yaklasiklar: z.boolean().optional().describe('true ise iki yarıya bağlı bileşik bahisler de (2. Yarı Sonucu, İY/MS, Hangi Yarıda…) listelenir; model bunlarda yaklaşıktır'),
         tarih: TARIH,
       },
@@ -198,7 +290,8 @@ export function buildHandlers(ctx = {}) {
         if (!b) return text(`${gun} için bültende maç yok.`, true);
         const s = getSettings();
         const minO = a.min_oran ?? s.tekMacMinOran, maxO = a.max_oran ?? s.tekMacMaxOran;
-        const rows = listMatches(b.id, { gun, lig: a.lig, bahis: a.bahis, minOran: minO, maxOran: maxO, ligler: s.ligDahil, haricLigler: s.ligHaric, baslamamisSonra: Date.now() + 5 * 60000 });
+        const rows = listMatches(b.id, { gun, lig: a.lig, bahis: a.bahis, minOran: minO, maxOran: maxO, ligler: s.ligDahil, haricLigler: s.ligHaric, baslamamisSonra: Date.now() + 5 * 60000 })
+          .filter(m => !a.verili_ligler || espnLig(m.lig));
         const aday = [];
         for (const m of rows) for (const o of m.oranlar) {
           const md = secimModeli(m.id, o.bahis, o.secim, o.oran);
@@ -224,7 +317,7 @@ export function buildHandlers(ctx = {}) {
         if (!ks.length) return text('Aktif kupon yok.');
         const s = getSettings();
         const gunler = [...new Set(ks.map(k => k.tarih))];
-        return text(ks.map(k => `[${k.tarih}] ` + couponText(k)).join('\n\n') + `\n\nGünlük toplam: ${gunler.map(g => `${g}: ${dailyTotal(g)}`).join(', ')} / ${s.gunlukButce} TL`);
+        return text(ks.map(k => `[${k.tarih}] ` + couponText(k) + `\n  ${tabanYazi(tabanPuan(k))}`).join('\n\n') + `\n\nGünlük toplam: ${gunler.map(g => `${g}: ${dailyTotal(g)}`).join(', ')} / ${s.gunlukButce} TL`);
       },
     },
 
@@ -242,9 +335,14 @@ export function buildHandlers(ctx = {}) {
         const k = getCoupon(kupon_id);
         if (!k) return text(`#${kupon_id} bulunamadı.`, true);
         if (k.durum !== 'aktif') return text(`#${kupon_id} aktif değil (${k.durum}).`, true);
+        // Puan cetveli: taban puan kodla hesaplanır, Revio en fazla ±2 oynatabilir
+        const t = tabanPuan(k);
+        if (Math.abs(puan - t.puan) > PUAN_ESNEKLIK) {
+          return text(`#${kupon_id} için puan ${puan} kabul edilmedi. ${tabanYazi(t)}. Taban puandan sapman en fazla ${PUAN_ESNEKLIK}; daha fazlası gerekiyorsa gerekçeni eleştiriye yaz ve sınırdaki puanı ver.`, true);
+        }
         const gecerli = degistirilmeli.filter(c => k.secimler.some(s => s.mac_kodu === String(c)));
-        db.prepare('UPDATE kuponlar SET puan = ?, elestiri = ?, degistirilmeli = ?, lehte = ?, aleyhte = ? WHERE id = ?')
-          .run(puan, elestiri, JSON.stringify(gecerli), lehte ?? null, aleyhte ?? null, kupon_id);
+        db.prepare('UPDATE kuponlar SET puan = ?, taban_puan = ?, elestiri = ?, degistirilmeli = ?, lehte = ?, aleyhte = ? WHERE id = ?')
+          .run(puan, t.puan, elestiri, JSON.stringify(gecerli), lehte ?? null, aleyhte ?? null, kupon_id);
         emit('puan', { kupon: getCoupon(kupon_id), oturum_id: oid() });
         emit('ajan_durum', { ajan: 'cok-bilen-kardes', durum: `#${kupon_id} → ${puan}/10` });
         return text(`#${kupon_id} puanlandı: ${puan}/10.`);
@@ -350,6 +448,27 @@ export function buildHandlers(ctx = {}) {
       },
     },
   };
+}
+
+async function takimFormuYazi({ mac_kodu, takim, lig, gun }) {
+  let m = null;
+  if (mac_kodu) {
+    const b = gunBulteni(gun);
+    m = b ? listMatches(b.id, { gun, kodlar: [mac_kodu] })[0] : null;
+    if (!m) return `${mac_kodu} ${gun} bülteninde yok.`;
+    lig = m.lig;
+  }
+  const slug = espnLig(lig);
+  if (!slug) return takim && !mac_kodu ? teamForm(takim) : `Veri yok: "${lig ?? '?'}" ligi ESPN kaynağında yok. Gerekçeni oranlara dayandır ve bunu belirt.`;
+  const satir = (f) => !f ? 'ESPN puan durumunda eşleşmedi' : `${f.takim.ad} (${f.takim.sira}. sıra, ${f.takim.o} maç, ${f.takim.g}G ${f.takim.b}B ${f.takim.m}M, gol ${f.takim.ag}-${f.takim.yg}) son maçlar: ` +
+    f.maclar.map(x => `${x.s} ${x.a}-${x.y} ${x.ic ? 'ev' : 'dep'} ${x.rakip} (${x.tarih})`).join(' | ');
+  try {
+    if (m) {
+      const [fe, fd, bm] = await Promise.all([takimFormu(slug, m.ev), takimFormu(slug, m.deplasman), bagimsizModel(m)]);
+      return `${m.mac_kodu} ${m.ev} - ${m.deplasman} (${m.lig}) [kaynak: ESPN]\nEv: ${satir(fe)}\nDeplasman: ${satir(fd)}` + (bm ? `\n${bagimsizYazi(bm)}` : '');
+    }
+    return `[kaynak: ESPN] ${satir(await takimFormu(slug, takim))}`;
+  } catch (e) { return `ESPN verisine ulaşılamadı (${e.message}). Gerekçeni oranlara dayandır.`; }
 }
 
 async function teamForm(takim) {

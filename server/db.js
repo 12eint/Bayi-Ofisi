@@ -122,6 +122,10 @@ kolonEkle('kuponlar', 'beklenen_getiri', 'REAL');         // model_olasilik × t
 kolonEkle('kuponlar', 'risk_uyarilari', 'TEXT');          // risk kurulu uyarıları (JSON dizi)
 kolonEkle('kuponlar', 'lehte', 'TEXT');                   // Kardeş'in kupon lehine en güçlü argümanı
 kolonEkle('kuponlar', 'aleyhte', 'TEXT');                 // ... ve ona cevabı / en büyük risk
+kolonEkle('kuponlar', 'taban_puan', 'INTEGER');            // Hakan Revio'nun puan cetvelinden kodla hesaplanan taban puan
+kolonEkle('kupon_secimleri', 'bagimsiz_olasilik', 'REAL');  // ESPN puan durumundan bağımsız güç modeli olasılığı (karne ve çelişki kuralı için)
+kolonEkle('maclar', 'iy_ev', 'INTEGER');                 // ilk yarı skoru (ESPN gol dakikalarından ya da elle)
+kolonEkle('maclar', 'iy_dep', 'INTEGER');
 kolonEkle('maclar', 'gun', 'TEXT');                      // maçın İstanbul günü (YYYY-MM-DD); bülten artık tek güne bağlı değil
 {
   const eksik = db.prepare('SELECT m.id, m.baslama, b.tarih FROM maclar m JOIN bultenler b ON b.id = m.bulten_id WHERE m.gun IS NULL').all();

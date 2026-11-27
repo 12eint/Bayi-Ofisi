@@ -12,7 +12,7 @@ const api = async (url, opt = {}) => {
 };
 
 const S = { durum: null, kadro: {}, maclar: [], kuponlar: [], calisiyor: false, tvSayfa: 0, tvSayfalar: [] };
-const AJAN_SIRA = ['genel-mudur', 'yasli-dayi', 'hizli-genc', 'beyaz-hayalci', 'cok-bilen-kardes'];
+const AJAN_SIRA = ['genel-mudur', 'yasli-dayi', 'hizli-genc', 'beyaz-hayalci', 'inatci-eniste', 'spor-totocu', 'cok-bilen-kardes'];
 
 /* ---------------- Sekmeler ---------------- */
 function sekmeAc(ad) {
@@ -52,7 +52,7 @@ function butceRozeti(b) {
   r.textContent = `Claude payı: ${b.harcanan}/${b.limit}`;
   r.className = 'rozet ' + (b.durum === 'DUR' ? 'kotu' : b.kalan < b.limit * 0.3 ? 'uyari' : 'iyi');
   r.title = b.sifirlandi
-    ? `5 saatlik dilim sıfırlandı: bu dilimde sistem henüz pay kullanmadı (sınır ${b.limit}). Genel Müdür bir sonraki işte yeni dilimi ölçer.`
+    ? `5 saatlik dilim sıfırlandı: bu dilimde sistem henüz pay kullanmadı (sınır ${b.limit}). Harambe bir sonraki işte yeni dilimi ölçer.`
     : `Bu 5 saatlik dilimde sistemin kullandığı pay: ${b.harcanan} puan (sınır ${b.limit}). Dilim %${b.dilim_doluluk} dolu, ${new Date(b.sifirlanma).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}'te sıfırlanır. ` +
       `Son ölçüm: ${new Date(b.guncelleme).toLocaleTimeString('tr-TR')}. Bir kupon turu ~${b.tur_tahmini} puan.` + (b.durum === 'DUR' ? ' PAY DOLDU: yeni işler sıfırlanmaya kadar bekler.' : '');
 }
@@ -62,7 +62,7 @@ function modRozeti(modAdi, gm) {
   butceRozeti(modAdi === 'claude-code' ? gm?.butce : null);
   if (modAdi === 'claude-code') {
     const girisYok = gm?.cli?.kurulu && !gm.cli.giris;
-    mod.textContent = girisYok ? '○ Claude girişi yok' : gm?.calisiyor ? '● Genel Müdür çalışıyor' : gm?.cevrimici ? '● Genel Müdür hazır (Claude)' : '○ Genel Müdür çevrimdışı';
+    mod.textContent = girisYok ? '○ Claude girişi yok' : gm?.calisiyor ? '● Harambe çalışıyor' : gm?.cevrimici ? '● Harambe hazır (Claude)' : '○ Harambe çevrimdışı';
     mod.className = 'rozet ' + (gm?.cevrimici && !girisYok ? 'iyi' : 'kotu');
     mod.title = girisYok
       ? 'Claude Code komut satırına giriş yapılmamış: terminalde bir kez "claude /login" çalıştır.'
@@ -178,6 +178,7 @@ $('#btnYenile2').addEventListener('click', (e) => bultenYenile(e.currentTarget))
 /* ---------------- Ofis ---------------- */
 function aralikYazi(k) {
   const a = S.durum?.ayarlar?.ajanlar?.[k];
+  if (k === 'spor-totocu') { const t = S.durum?.ayarlar?.sporToto; return t ? `${t.aktif === false ? 'PASİF · ' : ''}Spor Toto · en fazla ${t.maxTutar} TL · kolon ${t.kolonUcreti} TL` : 'Spor Toto'; }
   if (!a) return k === 'cok-bilen-kardes' ? 'eleştirmen · 1-10 puan' : 'ofis şefi';
   return `${a.aktif ? '' : 'PASİF · '}oran ${a.minOran}-${a.maxOran} · ${a.minMac}-${a.maxMac} maç · ${a.tutar} TL`;
 }
@@ -243,6 +244,36 @@ function balon(ajan, mesaj) {
 }
 
 /* ---------------- Fişler ---------------- */
+/* ---------------- Spor Toto ---------------- */
+async function totoYukle() {
+  const kap = $('#toto'); if (!kap) return;
+  let r; try { r = await api('/api/toto'); } catch (e) { kap.innerHTML = `<p class="bos">Spor Toto okunamadı: ${esc(e.message)}</p>`; return; }
+  const p = r.program;
+  if (!p) { kap.innerHTML = '<p class="bos">Spor Toto programına ulaşılamadı.</p>'; $('#totoOzet').textContent = ''; return; }
+  const kapanis = new Date(p.bitis + '+03:00');
+  $('#totoOzet').textContent = `${p.donem}. dönem · kapanış ${kapanis.toLocaleString('tr-TR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} · sınır ${tl(r.ayar.maxTutar)} (kolon ${tl(r.ayar.kolonUcreti)})`;
+  if (!r.kuponlar.length) {
+    kap.innerHTML = `<p class="bos">Bu dönem için Spor Toto önerisi yok. Harambe'ye "Spor Toto kuponu hazırla" de.${kapanis < new Date() ? ' (Bu dönemin oyun süresi kapandı; yeni program açılınca hazırlanabilir.)' : ''}</p>`;
+    return;
+  }
+  const kutu = (secim, harf, sonuc) => `<span class="toto-kutu${secim.includes(harf) ? ' isaretli' : ''}${sonuc === harf ? ' sonuc' : ''}">${harf}</span>`;
+  kap.innerHTML = r.kuponlar.map(k => {
+    const tur = (n) => k.secimler.filter(s => s.secim.length === n).length;
+    const satirlar = k.secimler.map(s => {
+      const pm = p.maclar.find(m => m.no === s.mac_no);
+      return `<tr class="${s.sonuc ? (s.tuttu ? 'tuttu' : 'yatti') : ''}" title="${esc(s.gerekce ?? '')}"><td>${s.mac_no}</td><td>${esc(s.mac_adi)}<small>${esc(s.lig ?? '')}</small></td>
+        <td class="toto-kutular">${['1', '0', '2'].map(h => kutu(s.secim, h, s.sonuc)).join('')}</td><td class="num">${pm ? `${pm.halk[1]}/${pm.halk[0]}/${pm.halk[2]}` : '–'}</td></tr>`;
+    }).join('');
+    return `<div class="toto-fis">
+      <div class="toto-ust"><b>🎟️ SPOR TOTO · #${k.id}</b><span>${k.donem}. dönem</span></div>
+      <table class="toto-tablo"><tr><th>No</th><th>Maç</th><th>1 0 2</th><th>Halk %</th></tr>${satirlar}</table>
+      <div class="toto-alt"><span>Banko ${tur(1)} · Çifte ${tur(2)} · Üçlü ${tur(3)}</span><span><b>${k.kolon} kolon · ${tl(k.tutar)}</b></span></div>
+      <div class="toto-alt"><span>15/15 model olasılığı</span><span>${k.model_olasilik == null ? '–' : '%' + (k.model_olasilik * 100).toFixed(4)}</span></div>
+      ${k.sonuclanan ? `<div class="toto-alt"><span>Biten maçlar</span><span><b>${k.dogru}/${k.sonuclanan} doğru</b></span></div>` : ''}
+      ${k.aciklama ? `<div class="aciklama">“${esc(k.aciklama)}”</div>` : ''}
+      <div class="alt">YALNIZCA ÖNERİDİR · OYNANMIŞ KUPON DEĞİLDİR</div></div>`;
+  }).join('');
+}
 async function kuponlariYukle() {
   // Bugün ve sonraki günlerin aktif fişleri (geçmiş günler Geçmiş sekmesinde)
   S.kuponlar = await api(`/api/kuponlar?min_tarih=${S.durum?.bugun ?? ''}`);
@@ -264,7 +295,7 @@ function fisHtml(k) {
   return `<div class="fis${k.durum !== 'aktif' ? ' revize' : ''}" id="fis-${k.id}">
     <div class="ust"><strong>BAYİ OFİSİ</strong><br>KUPON ÖNERİSİ · FİŞ #${k.id}<br>${esc(kadro.emoji)} ${esc(kadro.ad)}<br>
       ${new Date(k.olusturma).toLocaleString('tr-TR')}<br>Maç günü: ${esc(k.tarih)}${k.revize_of ? `<br>(#${k.revize_of} revizyonu)` : ''}${k.durum !== 'aktif' ? `<br>[${esc(k.durum)}]` : ''}</div>
-    ${k.puan != null ? `<div class="damga" style="--d:${puanRenk(k.puan)}"><div><b>${k.puan}</b><small>/10 KARDEŞ</small></div></div>` : ''}
+    ${k.puan != null ? `<div class="damga" style="--d:${puanRenk(k.puan)}"><div><b>${k.puan}</b><small>/10 REVİO</small></div></div>` : ''}
     ${k.secimler.map(s => `<div class="secim${isaret.has(s.mac_kodu) ? ' isaretli' : ''}${s.sonuc ? ' ' + s.sonuc : ''}">
         <div class="s1"><span>${esc(s.mac_kodu)} · ${esc(s.saat ?? '')}</span><span>MBS ${s.mbs ?? 1}</span></div>
         <div>${esc(s.mac_adi)}</div>
@@ -279,13 +310,14 @@ function fisHtml(k) {
       <div><span>Risk</span><span>${esc(k.risk ?? '-')}</span></div>
       ${k.model_olasilik != null ? `<div><span>Model tutma</span><span>${yuzdeYaz(k.model_olasilik)}</span></div>
       <div><span>Beklenen getiri</span><span class="${degerSinif(k.beklenen_getiri)}">${degerYaz(k.beklenen_getiri)}</span></div>` : ''}
+      ${k.taban_puan != null ? `<div title="Puan cetvelinden kodla hesaplanan taban puan; Hakan Revio en fazla ±2 oynatabilir"><span>Taban puan → Revio</span><span>${k.taban_puan} → ${k.puan ?? '–'}</span></div>` : ''}
     </div>
     ${k.aciklama ? `<div class="aciklama">“${esc(k.aciklama)}”</div>` : ''}
-    ${k.risk_uyarilari?.length ? `<div class="risk-kurulu"><b>⚠ Risk kurulu</b>${k.risk_uyarilari.map(u => `<div>• ${esc(u)}</div>`).join('')}</div>` : ''}
+    ${k.risk_uyarilari?.length ? `<div class="risk-kurulu"><b>⚠ Nikah Dairesi</b>${k.risk_uyarilari.map(u => `<div>• ${esc(u)}</div>`).join('')}</div>` : ''}
     ${k.lehte || k.aleyhte ? `<div class="tartisma">
       ${k.lehte ? `<div class="lehte"><b>Lehte:</b> ${esc(k.lehte)}</div>` : ''}
       ${k.aleyhte ? `<div class="aleyhte"><b>Aleyhte:</b> ${esc(k.aleyhte)}</div>` : ''}</div>` : ''}
-    ${k.elestiri ? `<div class="elestiri"><b>Kardeş${k.lehte ? ' (hüküm)' : ''}:</b> ${esc(k.elestiri)}</div>` : ''}
+    ${k.elestiri ? `<div class="elestiri"><b>Hakan Revio${k.lehte ? ' (hüküm)' : ''}:</b> ${esc(k.elestiri)}</div>` : ''}
     <div class="barkod"></div>
     <div class="alt">YALNIZCA ÖNERİDİR · OYNANMIŞ KUPON DEĞİLDİR<br>Bahis risk içerir; bütçeni aşma.</div>
   </div>`;
@@ -296,18 +328,18 @@ function fisOzetHtml(k) {
   const kadro = S.kadro[k.ajan] ?? { ad: k.ajan, emoji: '' };
   return `<button type="button" class="fis-ozet" data-fis-ac="${k.id}" aria-haspopup="dialog">
       <span class="fo-ust"><span class="fo-ajan">${esc(kadro.emoji)} ${esc(kadro.ad)}</span>
-        <span>${k.puan != null ? `<span class="fo-puan" style="--d:${puanRenk(k.puan)}" title="Çok Bilen Kardeş puanı">${k.puan}/10</span>` : ''}<span class="fo-no">#${k.id}</span></span></span>
+        <span>${k.puan != null ? `<span class="fo-puan" style="--d:${puanRenk(k.puan)}" title="Hakan Revio puanı">${k.puan}/10</span>` : ''}<span class="fo-no">#${k.id}</span></span></span>
       <span class="fo-satir"><span>Maç</span><b>${k.secimler.length}</b></span>
       <span class="fo-satir"><span>Oran</span><b>${Number(k.toplam_oran).toFixed(2)}</b></span>
       <span class="fo-satir"><span>Tutar</span><b>${tl(k.tutar)}</b></span>
       <span class="fo-satir fo-kazanc"><span>Olası kazanç</span><b>${tl(k.olasi_kazanc)}</b></span>
       ${k.model_olasilik != null ? `<span class="fo-satir" title="Poisson modeline göre kuponun tutma olasılığı (oranlardan hesaplanır)"><span>Model tutma</span><b>${yuzdeYaz(k.model_olasilik)}</b></span>` : ''}
-      ${k.risk_uyarilari?.length ? `<span class="fo-risk" title="${esc(k.risk_uyarilari.join(' · '))}">⚠ Risk kurulu: ${k.risk_uyarilari.length} uyarı</span>` : ''}
+      ${k.risk_uyarilari?.length ? `<span class="fo-risk" title="${esc(k.risk_uyarilari.join(' · '))}">⚠ Nikah Dairesi: ${k.risk_uyarilari.length} uyarı</span>` : ''}
       <span class="fo-ac">Fişi aç ▸</span>
     </button>`;
 }
 /* Fiş sekmeleri: Tümü + her kupon ajanı. Seçim tarayıcıda hatırlanır. */
-const FIS_AJANLARI = ['yasli-dayi', 'hizli-genc', 'beyaz-hayalci'];
+const FIS_AJANLARI = ['yasli-dayi', 'hizli-genc', 'beyaz-hayalci', 'inatci-eniste'];
 let fisSekme = (() => { try { return localStorage.getItem('fisSekme') || 'hepsi'; } catch { return 'hepsi'; } })();
 function fisSekmeleriCiz() {
   const say = (a) => S.kuponlar.filter(k => a === 'hepsi' || k.ajan === a).length;
@@ -332,7 +364,7 @@ function fisleriCiz() {
   const aktif = S.kuponlar.filter(k => fisSekme === 'hepsi' || k.ajan === fisSekme);
   const el = $('#fisler');
   if (!aktif.length) {
-    el.innerHTML = `<p class="bos">${S.kuponlar.length ? 'Bu ajanın bugün ve sonrası için fişi yok.' : 'Henüz fiş yok. Sağdaki panelden Genel Müdür’e talimat ver.'}</p>`;
+    el.innerHTML = `<p class="bos">${S.kuponlar.length ? 'Bu ajanın bugün ve sonrası için fişi yok.' : 'Henüz fiş yok. Sağdaki panelden Harambe’ye talimat ver.'}</p>`;
     $('#fisOzet').textContent = ''; return;
   }
   const butce = S.durum?.ayarlar?.gunlukButce ?? 0;
@@ -443,8 +475,8 @@ async function sohbetYukle() {
   $('#sohbet').innerHTML = '';
   if (!ms.length) mesajEkle('gm', 'Hoş geldin patron. Ne hazırlayalım? Örnek: **“Yarın için kuponları hazırla, Premier Lig ağırlıklı olsun.”**');
   if (S.durum?.mod === 'claude-code') mesajEkle('sistem', S.durum.gm?.cevrimici
-    ? 'Genel Müdür hazır: yazdığın anda aboneliğinle çalışan Claude Code devreye girer; yazmadığın sürece token harcanmaz.'
-    : 'Genel Müdür şu an hazır değil. Yazabilirsin; mesajın sırada bekler.');
+    ? 'Harambe hazır: yazdığın anda aboneliğinle çalışan Claude Code devreye girer; yazmadığın sürece token harcanmaz.'
+    : 'Harambe şu an hazır değil. Yazabilirsin; mesajın sırada bekler.');
   else if (S.durum?.mod === 'demo') mesajEkle('sistem', 'Bu panel deneme modunda (kural tabanlı). Ayarlar’dan “Claude Code” moduna alabilirsin.');
   ms.forEach(m => mesajEkle(m.kim === 'patron' ? 'patron' : 'gm', m.metin));
 }
@@ -458,8 +490,8 @@ $('#sohbetForm').addEventListener('submit', async (e) => {
       S.bekliyor = true;
       if (r.butce_dolu) sistemMesaji(`Bu 5 saatlik dilimde Claude payı (%${r.butce_dolu.limit}) doldu. Mesajın sırada; ${new Date(r.butce_dolu.sifirlanma).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} sonrasında cevaplanacak.`);
       else if (r.gm?.cli?.kurulu && !r.gm.cli.giris) sistemMesaji('Claude Code’a giriş yapılmamış; terminalde bir kez "claude /login" çalıştır. Mesajın sırada.');
-      else if (!r.gm?.cevrimici) sistemMesaji('Genel Müdür şu an çevrimdışı; mesajın sırada.');
-      yaziyorGoster('Genel Müdür’e iletildi');
+      else if (!r.gm?.cevrimici) sistemMesaji('Harambe şu an çevrimdışı; mesajın sırada.');
+      yaziyorGoster('Harambe’ye iletildi');
       masaDurum('genel-mudur', 'mesajın iletildi...', true);
     } else calismaDurumu(true);
   } catch (err) { sistemMesaji(err.message, true); }
@@ -479,6 +511,7 @@ function olaylariDinle() {
       case 'balon': balon(e.ajan, e.mesaj); break;
       case 'risk': sahne('riskKarar', e); break;
       case 'kupon': sahne('printTicket'); kuponlariYukle(); break;
+      case 'toto': sahne('printTicket'); totoYukle(); break;
       case 'puan': kuponlariYukle(); break;
       case 'bulten': bultenYukle(); durumYukle(); break;
       case 'oturum':
@@ -548,6 +581,7 @@ async function ayarFormuDoldur() {
   const a = await api('/api/ayarlar'); const f = $('#ayarForm');
   for (const k of ['gunlukButce', 'tekMacMinOran', 'tekMacMaxOran', 'bultenMaxYasSaat', 'ofisModu', 'oturumButceUsd', 'aboneligeSinirYuzde', 'nobetAralikDk']) f.elements[k].value = a[k];
   f.elements.mbsKurali.checked = !!a.mbsKurali;
+  f.elements.totoMaxTutar.value = a.sporToto?.maxTutar ?? ''; f.elements.totoKolonUcreti.value = a.sporToto?.kolonUcreti ?? ''; f.elements.totoAktif.checked = a.sporToto?.aktif !== false;
   f.elements.ligDahil.value = a.ligDahil.join(', '); f.elements.ligHaric.value = a.ligHaric.join(', ');
   $('#ajanAyarlari').innerHTML = Object.entries(a.ajanlar).map(([k, x]) => `<div class="ajan-ayar" data-ajan="${k}">
     <h3>${esc(S.kadro[k]?.emoji ?? '')} ${esc(S.kadro[k]?.ad ?? k)}</h3>
@@ -562,6 +596,7 @@ $('#ayarForm').addEventListener('submit', async (e) => {
     bultenMaxYasSaat: +f.elements.bultenMaxYasSaat.value, ofisModu: f.elements.ofisModu.value, oturumButceUsd: +f.elements.oturumButceUsd.value,
     aboneligeSinirYuzde: +f.elements.aboneligeSinirYuzde.value, nobetAralikDk: +f.elements.nobetAralikDk.value,
     mbsKurali: f.elements.mbsKurali.checked, ligDahil: liste(f.elements.ligDahil.value), ligHaric: liste(f.elements.ligHaric.value), ajanlar: {},
+    sporToto: { maxTutar: +f.elements.totoMaxTutar.value, kolonUcreti: +f.elements.totoKolonUcreti.value, aktif: f.elements.totoAktif.checked },
   };
   $$('.ajan-ayar').forEach(d => {
     const o = { aktif: $('[name=aktif]', d).checked };
@@ -574,6 +609,35 @@ $('#ayarForm').addEventListener('submit', async (e) => {
 });
 
 /* ---------------- Geçmiş ---------------- */
+function genelIstatistikCiz(g, ad) {
+  const t = $('#genelIstatistik'); if (!t || !g) return;
+  if (!g.ajanlar.length) { t.innerHTML = '<tr><td>Henüz kupon yok.</td></tr>'; $('#genelOzet').textContent = ''; return; }
+  const gun = (x) => (x ? kisaTarih(x) : '–');
+  $('#genelOzet').textContent = `${gun(g.toplam.ilk_gun)} – ${gun(g.toplam.son_gun)}`;
+  const yz = (x) => (x == null ? '–' : `%${x}`);
+  const satir = (a, toplam = false) => `<tr${toplam ? ' class="toplam-satir"' : ''}><td>${toplam ? '<b>TOPLAM</b>' : esc(ad(a.ajan))}</td>
+    <td class="num">${a.mac}</td><td class="num pos">${a.tuttu ?? 0}</td><td class="num neg">${a.yatti ?? 0}</td><td class="num">${a.iade ?? 0}</td><td class="num">${a.bekleyen ?? 0}</td>
+    <td class="num"><b>${yz(a.isabet)}</b></td><td class="num">${a.kupon}</td><td class="num">${a.kupon_kazanan}/${a.kupon_kazanan + a.kupon_kaybeden}</td><td class="num">${yz(a.kupon_isabet)}</td></tr>`;
+  t.innerHTML = `<tr><th>Bahisçi</th><th>Verilen maç</th><th>Tuttu</th><th>Yattı</th><th>İade</th><th>Bekleyen</th><th>Maç isabeti</th><th>Kupon</th><th>Tutan kupon</th><th>Kupon isabeti</th></tr>` +
+    g.ajanlar.map(a => satir(a)).join('') + satir(g.toplam, true);
+}
+function tutmaKarnesiCiz(k, ad) {
+  const kap = $('#tutmaKarnesi'); if (!kap) return;
+  if (!k?.toplam) { kap.innerHTML = '<p class="bos">Henüz sonuçlanmış seçim yok; karne sonuçlar geldikçe dolar.</p>'; $('#tutmaOzet').textContent = ''; return; }
+  $('#tutmaOzet').textContent = `${k.toplam} sonuçlanmış seçim`;
+  const yz = (x) => (x == null ? '–' : `%${x}`);
+  // tahmin ile gerçek arasındaki fark: 5 puandan az yeşil, 5-15 sarı, fazlası kırmızı
+  const fark = (t, g) => (t == null ? '' : Math.abs(t - g) < 5 ? 'pos' : Math.abs(t - g) < 15 ? '' : 'neg');
+  const tablo = (baslik, satirlar, adFn = (x) => x) => `<h3 class="gun-baslik">${baslik}</h3><div class="tablo-kap"><table class="liste">
+    <tr><th></th><th>Seçim</th><th>Tuttu</th><th>Oran modeli dedi</th><th>Bağımsız model dedi</th><th>Brier (oran)</th><th>Brier (bağımsız)</th></tr>
+    ${satirlar.map(g => `<tr><td>${esc(adFn(g.ad))}</td><td class="num">${g.n}</td><td class="num"><b>${yz(g.tutma)}</b></td>
+      <td class="num ${fark(g.tahminOran, g.tutma)}">${yz(g.tahminOran)}</td><td class="num ${fark(g.tahminBag, g.tutma)}">${yz(g.tahminBag)}${g.nBag && g.nBag < g.n ? ` <small>(${g.nBag})</small>` : ''}</td>
+      <td class="num">${g.brierOran ?? '–'}</td><td class="num">${g.brierBag ?? '–'}</td></tr>`).join('')}</table></div>`;
+  const kv = k.kiyas;
+  const kazanan = kv.n ? [['Oran modeli', kv.oranModeli], ['Bağımsız model', kv.bagimsizModel], ['İkisinin ortalaması', kv.karisik]].sort((a, b) => a[1] - b[1])[0][0] : null;
+  kap.innerHTML = tablo('Ajanlara göre', k.ajanlar, ad) + tablo('Bahis türüne göre', k.bahisler) + tablo('Oran modelinin olasılık dilimine göre', k.dilimler) +
+    `<p class="ipucu">${kv.n ? `Model kıyası (iki modelin de olasılık verdiği ${kv.n} seçim, Brier): oran modeli <b>${kv.oranModeli}</b> · bağımsız model <b>${kv.bagimsizModel}</b> · ikisinin ortalaması <b>${kv.karisik}</b> → şimdilik en isabetli: <b>${kazanan}</b>.` : 'Model kıyası için iki modelin de olasılık verdiği sonuçlanmış seçim henüz yok.'}</p>`;
+}
 async function gecmisYukle() {
   const g = await api('/api/gecmis');
   const ad = (k) => `${S.kadro[k]?.emoji ?? ''} ${S.kadro[k]?.ad ?? k}`;
@@ -583,11 +647,14 @@ async function gecmisYukle() {
       <td class="num">${tl(a.harcanan)}</td><td class="num">${tl(a.kazanilan)}</td><td class="num ${a.net >= 0 ? 'pos' : 'neg'}">${tl(a.net)}</td></tr>`).join('')
       : '<tr><td colspan="10">Henüz kupon yok.</td></tr>') +
     `<tr><td colspan="10" class="ipucu">Not: Kâr/zarar, önerilerin oynanmış olsaydı ne getireceğini gösteren varsayımsal bir hesaptır.</td></tr>`;
-  $('#bekleyen').innerHTML = `<tr><th>Gün</th><th>Kod</th><th>Saat</th><th>Maç</th><th>Lig</th><th>Skor (ev - dep)</th><th></th></tr>` +
+  genelIstatistikCiz(g.genel, ad);
+  tutmaKarnesiCiz(g.karne, ad);
+  $('#bekleyen').innerHTML = `<tr><th>Gün</th><th>Kod</th><th>Saat</th><th>Maç</th><th>Lig</th><th>Skor (ev - dep)</th><th>İlk yarı (isteğe bağlı)</th><th></th></tr>` +
     (g.bekleyen.length ? g.bekleyen.map((m, i) => `<tr><td>${esc(m.tarih)}</td><td>${esc(m.mac_kodu)}</td><td>${esc(m.saat ?? '')}</td><td>${esc(m.mac_adi)}</td><td>${esc(m.lig)}</td>
       <td><input type="number" min="0" style="width:56px" id="sev-${i}"> - <input type="number" min="0" style="width:56px" id="sdep-${i}"></td>
+      <td><input type="number" min="0" style="width:48px" id="siyev-${i}"> - <input type="number" min="0" style="width:48px" id="siydep-${i}"></td>
       <td><button class="btn kucuk sari" data-skor="${i}" data-tarih="${esc(m.tarih)}" data-kod="${esc(m.mac_kodu)}">Kaydet</button></td></tr>`).join('')
-      : '<tr><td colspan="7">Sonuç bekleyen maç yok.</td></tr>');
+      : '<tr><td colspan="8">Sonuç bekleyen maç yok.</td></tr>');
   $('#gecmisGunler').innerHTML = g.gunler.map(d => `<h3 class="gun-baslik">${esc(d.tarih)} — ${d.kuponlar.length} kupon</h3>
     <div class="kart"><table class="liste"><tr><th>Fiş</th><th>Ajan</th><th>Oran</th><th>Tutar</th><th>Puan</th><th>Sonuç</th><th>Ödeme</th><th>Seçimler</th></tr>
     ${d.kuponlar.map(k => `<tr><td>#${k.id}</td><td>${esc(ad(k.ajan))}</td><td class="num">${k.toplam_oran}</td><td class="num">${tl(k.tutar)}</td><td class="num">${k.puan ?? '-'}</td>
@@ -596,13 +663,40 @@ async function gecmisYukle() {
         <select data-secim="${s.id}"><option value="">?</option>${['tuttu', 'yatti', 'iade'].map(v => `<option ${s.sonuc === v ? 'selected' : ''}>${v}</option>`).join('')}</select></div>`).join('')}</td></tr>`).join('')}
     </table></div>`).join('');
 }
+// Tablo içeriği her değiştiğinde (geçmiş, bülten, karne…) sayı sütunu başlıklarını yeniden hizala
+let hizalaBekliyor = false;
+new MutationObserver(() => {
+  if (hizalaBekliyor) return; hizalaBekliyor = true;
+  requestAnimationFrame(() => { hizalaBekliyor = false; sutunHizala(); });
+}).observe(document.querySelector('main') ?? document.body, { childList: true, subtree: true });
+/** Tablolarda sayı sütunlarının başlığını da sayılar gibi sağa yaslar (başlık ile değer aynı hizada dursun) */
+function sutunHizala(kok = document) {
+  for (const t of kok.querySelectorAll('table.liste')) {
+    const satirlar = [...t.rows];
+    const baslik = satirlar.find(r => r.querySelector('th')); if (!baslik) continue;
+    [...baslik.cells].forEach((th, i) => {
+      const hucreler = satirlar.filter(r => r !== baslik && r.cells.length === baslik.cells.length).map(r => r.cells[i]);
+      th.classList.toggle('num', hucreler.length > 0 && hucreler.every(c => c.classList.contains('num')));
+    });
+  }
+}
 document.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-skor]'); if (!b) return;
   const i = b.dataset.skor; const ev = parseInt($(`#sev-${i}`).value, 10); const dep = parseInt($(`#sdep-${i}`).value, 10);
   if (Number.isNaN(ev) || Number.isNaN(dep)) return alert('Skoru gir.');
-  const r = await api('/api/sonuc/skor', { method: 'POST', body: { tarih: b.dataset.tarih, mac_kodu: b.dataset.kod, ev, dep } });
+  const iyEv = parseInt($(`#siyev-${i}`).value, 10), iyDep = parseInt($(`#siydep-${i}`).value, 10);
+  const iy = Number.isNaN(iyEv) || Number.isNaN(iyDep) ? {} : { iy_ev: iyEv, iy_dep: iyDep };
+  const r = await api('/api/sonuc/skor', { method: 'POST', body: { tarih: b.dataset.tarih, mac_kodu: b.dataset.kod, ev, dep, ...iy } });
   if (r.elle_girilmeli?.length) alert(`${r.elle_girilmeli.length} seçim skordan değerlendirilemedi (ör. ${r.elle_girilmeli[0].bahis}). Aşağıdaki listeden elle işaretle.`);
   gecmisYukle();
+});
+$('#btnOtoSonuc')?.addEventListener('click', async (e) => {
+  const b = e.currentTarget; b.disabled = true; $('#otoSonucDurum').textContent = 'ESPN’e bakılıyor…';
+  try {
+    const r = await api('/api/sonuc/otomatik', { method: 'POST' });
+    $('#otoSonucDurum').textContent = `${r.bakilan} maça bakıldı, ${r.girilen} sonuç girildi (${r.iy_ile} tanesi ilk yarı skoruyla).` + (r.bulunamayan.length ? ` ESPN'de bulunamayan: ${r.bulunamayan.length} (elle gir).` : '');
+    gecmisYukle();
+  } catch (err) { $('#otoSonucDurum').textContent = `Hata: ${err.message}`; } finally { b.disabled = false; }
 });
 document.addEventListener('change', async (e) => {
   const s = e.target.closest('[data-secim]'); if (!s) return;
@@ -614,7 +708,7 @@ document.addEventListener('change', async (e) => {
 (async () => {
   try {
     await durumYukle();
-    await Promise.all([bultenYukle(), kuponlariYukle(), sohbetYukle()]);
+    await Promise.all([bultenYukle(), kuponlariYukle(), sohbetYukle(), totoYukle()]);
     gorunumUygula(gorunumOku());
   } catch (e) { sistemMesaji(`Sunucuya bağlanılamadı: ${e.message}`, true); }
   olaylariDinle();

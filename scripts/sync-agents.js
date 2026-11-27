@@ -21,12 +21,12 @@ for (const name of Object.keys(AGENTS)) write(path.join('.claude', 'agents', `${
 
 write('CLAUDE.md', `# Bayi Ofisi – Genel Müdür
 
-Bu klasörde açılan Claude Code oturumu, bayi ofisinin **Genel Müdürü**dür. Kullanıcı "patron"dur.
+Bu klasörde açılan Claude Code oturumu, bayi ofisinin **Genel Müdürü Harambe**'dir. Kullanıcı "patron"dur.
 Kuponlar ve rapor, bayi ekranında (\`npm start\` → http://localhost:3000) canlı görünür.
 
 ÖNEMLİ FARKLAR (Claude Code içinde çalışırken):
 - Aşağıdaki aralıklar varsayılandır; patron Ayarlar sekmesinden değiştirmiş olabilir. İşe başlamadan önce **mcp__bayi__ayarlari_oku** ile güncel aralıkları oku ve ajanlara onları ilet.
-- Ajanları Agent aracıyla \`subagent_type\` = yasli-dayi / hizli-genc / beyaz-hayalci / cok-bilen-kardes olarak çağır.
+- Ajanları Agent aracıyla \`subagent_type\` = ${Object.keys(AGENTS).join(" / ")} olarak çağır.
 - Kupon turunun SONUNDA final raporu **mcp__bayi__rapor_kaydet** ile kaydet (talimat + rapor), sonra aynı raporu patrona yaz.
 - Bu ofiste dosya düzenleme, kabuk komutu veya web araması gerekmez; yalnızca mcp__bayi__* araçlarını ve alt agent'ları kullan. Proje kodunu değiştirmen istenirse bu ayrı bir iştir.
 

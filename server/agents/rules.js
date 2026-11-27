@@ -2,6 +2,8 @@
 import { db, istanbulDate } from '../db.js';
 import { findOdd } from '../bulletin/store.js';
 import { secimModeli, yuzde, degerYazi } from '../model/index.js';
+import { AGENTS } from './definitions.js';
+import { secimOlasiligi } from '../veri/bagimsiz.js';
 
 export const r2 = (x) => Math.round(x * 100) / 100;
 const norm = (s) => (s || '').toLocaleLowerCase('tr-TR');
@@ -17,7 +19,7 @@ export function dailyTotal(tarih, haricId = null) {
  * @param {object} ctx { bulten, gun, settings, oturumId } – gun: kuponun maç günü (verilmezse bülten.tarih)
  * @returns {{ ok:boolean, hatalar:string[], kupon?:object }}
  */
-export function validateCoupon(p, { bulten, gun, settings, oturumId }) {
+export function validateCoupon(p, { bulten, gun, settings, oturumId, bagimsiz }) {
   gun ??= bulten?.tarih;
   const hatalar = [];
   const a = settings.ajanlar[p.ajan];
@@ -53,6 +55,10 @@ export function validateCoupon(p, { bulten, gun, settings, oturumId }) {
       continue;
     }
     const m = f.mac; const o = f.oran;
+    // Bazı ajanlar yalnızca belirli bahis/seçimleri oynar (ör. İnatçı Enişte: iki yarıda KG → Evet / Evet)
+    const izinli = AGENTS[p.ajan]?.bahisler, izinliSecim = AGENTS[p.ajan]?.secimler;
+    if (izinli && !izinli.includes(o.bahis)) { hatalar.push(`${s.mac_kodu}: "${o.bahis}" senin bahsin değil; yalnızca şunu oynayabilirsin: ${izinli.join(', ')}${izinliSecim ? ' → ' + izinliSecim.join(', ') : ''}.`); continue; }
+    if (izinliSecim && !izinliSecim.includes(o.secim)) { hatalar.push(`${s.mac_kodu}: "${o.secim}" seçimi senin değil; yalnızca ${izinliSecim.join(', ')} oynayabilirsin.`); continue; }
     if (m.gun && m.gun !== gun) hatalar.push(`${s.mac_kodu}: bu maç ${m.gun} gününde; kupon ${gun} günü için. Yalnızca o günün maçlarını seç.`);
     if (m.baslama && new Date(m.baslama).getTime() < Date.now() + 5 * 60000) hatalar.push(`${s.mac_kodu}: maç başlamış ya da başlamak üzere.`);
     if (o.oran < settings.tekMacMinOran || o.oran > settings.tekMacMaxOran) {
@@ -61,8 +67,12 @@ export function validateCoupon(p, { bulten, gun, settings, oturumId }) {
     if (settings.ligDahil?.length && !settings.ligDahil.some(l => norm(m.lig).includes(norm(l)))) hatalar.push(`${s.mac_kodu}: ${m.lig} dahil ligler listesinde değil.`);
     if (settings.ligHaric?.some(l => norm(m.lig).includes(norm(l)))) hatalar.push(`${s.mac_kodu}: ${m.lig} hariç tutulan ligde.`);
     const md = secimModeli(m.id, o.bahis, o.secim, o.oran);
+    // Bağımsız güç modeli (ESPN): bagimsiz[kod] = { verili, model? } – çağıran (araç) önceden hesaplar; verilmezse kontrol yapılmaz
+    const bg = bagimsiz?.[String(m.mac_kodu)];
+    if (a.yalnizcaVerili && bg && !bg.verili) hatalar.push(`${s.mac_kodu}: ${m.lig} / ${m.ev} - ${m.deplasman} için bağımsız veri (ESPN puan durumu) yok; sen yalnızca verisi olan maçları oynayabilirsin (mac_detay'da "Bağımsız güç modeli" satırı olanlar).`);
     detay.push({ mac_kodu: m.mac_kodu, mac_adi: `${m.ev} - ${m.deplasman}`, lig: m.lig, saat: m.saat, bahis: o.bahis, secim: o.secim, oran: o.oran, mbs: o.mbs ?? 1, gerekce: s.gerekce ?? '',
-      model_olasilik: md.model, piyasa_olasilik: md.piyasa, deger: md.deger, yaklasik: !!md.yaklasik });
+      model_olasilik: md.model, piyasa_olasilik: md.piyasa, deger: md.deger, yaklasik: !!md.yaklasik,
+      bagimsiz_olasilik: bg?.verili ? secimOlasiligi(bg.model, o.bahis, o.secim) : null });
   }
 
   if (settings.mbsKurali && detay.length) {
@@ -112,14 +122,14 @@ export function riskKurulu(detay, { gun, settings, haricId = null }) {
   // 1) Kötü değerli seçimler (iki yarı tahminli "yaklaşık" bahisler sayılmaz)
   const kotu = detay.filter(d => d.deger != null && !d.yaklasik && d.deger < r.kotuDeger);
   const kotuYazi = kotu.map(d => `${d.mac_kodu} ${d.bahis}: ${d.secim} (${degerYazi(d.deger)})`).join(', ');
-  if (kotu.length > r.maxKotuSecim) hatalar.push(`Risk kurulu: ${kotu.length} seçimin model değeri ${yz(r.kotuDeger)}'nin altında (en fazla ${r.maxKotuSecim}): ${kotuYazi}. Bunları değiştir.`);
+  if (kotu.length > r.maxKotuSecim) hatalar.push(`Nikah Dairesi (risk kurulu): ${kotu.length} seçimin model değeri ${yz(r.kotuDeger)}'nin altında (en fazla ${r.maxKotuSecim}): ${kotuYazi}. Bunları değiştir.`);
   else if (kotu.length) uyarilar.push(`Kötü değerli seçim: ${kotuYazi}`);
 
   // 2) Seçim başına ortalama değer (geometrik): kupon genelinde marjın üstünde kayıp var mı?
   const degerli = detay.filter(d => d.deger != null && !d.yaklasik);
   if (degerli.length) {
     const ort = Math.pow(degerli.reduce((x, d) => x * (1 + d.deger), 1), 1 / degerli.length) - 1;
-    if (ort < r.retOrtalamaDeger) hatalar.push(`Risk kurulu: seçim başına ortalama model değeri ${degerYazi(ort)}; sınır ${yz(r.retOrtalamaDeger)}. Bültenin olağan marjından kötü seçimler var, daha değerli seçimlere geç (deger_listesi).`);
+    if (ort < r.retOrtalamaDeger) hatalar.push(`Nikah Dairesi (risk kurulu): seçim başına ortalama model değeri ${degerYazi(ort)}; sınır ${yz(r.retOrtalamaDeger)}. Bültenin olağan marjından kötü seçimler var, daha değerli seçimlere geç (deger_listesi).`);
     else if (ort < r.uyariOrtalamaDeger) uyarilar.push(`Seçim başına ortalama değer ${degerYazi(ort)} (olağan marjın altında)`);
   }
 
@@ -130,6 +140,18 @@ export function riskKurulu(detay, { gun, settings, haricId = null }) {
     for (const [lig, n] of Object.entries(sayac)) if (n / detay.length > r.ligYogunluk) uyarilar.push(`Lig yoğunluğu: ${detay.length} maçın ${n}'i ${lig}`);
   }
 
+  // 4b) İki model çelişkisi: oran modeli seçimi destekliyor ama bağımsız güç modeli (ESPN) belirgin şekilde daha düşük veriyor
+  if (r.celiskiUyari != null) {
+    for (const d of detay) {
+      if (d.bagimsiz_olasilik == null || d.model_olasilik == null) continue;
+      const fark = d.model_olasilik - d.bagimsiz_olasilik;
+      if (fark <= r.celiskiUyari) continue;
+      const yazi = `${d.mac_kodu} ${d.bahis}: ${d.secim} → oran modeli ${yz(d.model_olasilik)}, bağımsız model ${yz(d.bagimsiz_olasilik)}`;
+      if (r.celiskiRet != null && fark > r.celiskiRet) hatalar.push(`Nikah Dairesi (risk kurulu): iki model çelişiyor (${yazi}). Sahadaki güç bu seçimi desteklemiyor; başka maç seç.`);
+      else uyarilar.push(`İki model çelişiyor: ${yazi}`);
+    }
+  }
+
   // 4) O günün diğer aktif kuponlarıyla çakışma (aynı maç, aynı seçim): tek sonuç birden çok kuponu yakar
   const ayni = db.prepare(`SELECT s.kupon_id, k.ajan FROM kupon_secimleri s JOIN kuponlar k ON k.id = s.kupon_id
     WHERE k.tarih = ? AND k.durum = 'aktif' AND k.id IS NOT ? AND s.mac_kodu = ? AND s.bahis = ? AND s.secim = ?`);
@@ -137,7 +159,7 @@ export function riskKurulu(detay, { gun, settings, haricId = null }) {
     const rows = ayni.all(gun, haricId, d.mac_kodu, d.bahis, d.secim);
     if (!rows.length) continue;
     const yazi = `${d.mac_kodu} ${d.bahis}: ${d.secim} → ${rows.map(x => `#${x.kupon_id}`).join(', ')}`;
-    if (rows.length + 1 > r.maxAyniMac) hatalar.push(`Risk kurulu: ${yazi} kuponlarında da var; aynı seçim bugün en fazla ${r.maxAyniMac} kuponda olabilir. Başka maç seç.`);
+    if (rows.length + 1 > r.maxAyniMac) hatalar.push(`Nikah Dairesi (risk kurulu): ${yazi} kuponlarında da var; aynı seçim bugün en fazla ${r.maxAyniMac} kuponda olabilir. Başka maç seç.`);
     else uyarilar.push(`Diğer kuponlarla ortak: ${yazi}`);
   }
   return { hatalar, uyarilar };
@@ -150,8 +172,8 @@ export function saveCoupon(k, { oturumId, risk, aciklama }) {
     const { lastInsertRowid: id } = db.prepare(`INSERT INTO kuponlar(oturum_id, bulten_id, ajan, tarih, olusturma, tutar, toplam_oran, olasi_kazanc, risk, aciklama, revize_of, model_olasilik, beklenen_getiri, risk_uyarilari)
       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(oturumId ?? null, k.bulten_id, k.ajan, k.tarih, new Date().toISOString(), k.tutar, k.toplam_oran, k.olasi_kazanc, risk ?? null, aciklama ?? null, k.revize_of,
       k.model_olasilik ?? null, k.beklenen_getiri ?? null, k.risk_uyarilari?.length ? JSON.stringify(k.risk_uyarilari) : null);
-    const ins = db.prepare('INSERT INTO kupon_secimleri(kupon_id, mac_kodu, mac_adi, lig, saat, bahis, secim, oran, mbs, gerekce, model_olasilik, piyasa_olasilik, deger) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)');
-    for (const s of k.secimler) ins.run(id, s.mac_kodu, s.mac_adi, s.lig, s.saat, s.bahis, s.secim, s.oran, s.mbs, s.gerekce, s.model_olasilik ?? null, s.piyasa_olasilik ?? null, s.deger ?? null);
+    const ins = db.prepare('INSERT INTO kupon_secimleri(kupon_id, mac_kodu, mac_adi, lig, saat, bahis, secim, oran, mbs, gerekce, model_olasilik, piyasa_olasilik, deger, bagimsiz_olasilik) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+    for (const s of k.secimler) ins.run(id, s.mac_kodu, s.mac_adi, s.lig, s.saat, s.bahis, s.secim, s.oran, s.mbs, s.gerekce, s.model_olasilik ?? null, s.piyasa_olasilik ?? null, s.deger ?? null, s.bagimsiz_olasilik ?? null);
     db.exec('COMMIT');
     return Number(id);
   } catch (e) { db.exec('ROLLBACK'); throw e; }
@@ -183,7 +205,7 @@ export function couponText(k) {
   return `Kupon #${k.id} [${k.ajan}] toplam oran ${k.toplam_oran}, ${k.tutar} TL → olası ${k.olasi_kazanc} TL, risk: ${k.risk ?? '-'}` +
     (k.model_olasilik != null ? `, model tutma ${yuzde(k.model_olasilik, 2)}, beklenen getiri ${degerYazi(k.beklenen_getiri)}` : '') +
     (k.puan ? `, puan ${k.puan}/10` : '') + `\n${lines.join('\n')}` +
-    (k.risk_uyarilari?.length ? `\n  Risk kurulu uyarıları: ${k.risk_uyarilari.join(' · ')}` : '') +
+    (k.risk_uyarilari?.length ? `\n  Nikah Dairesi uyarıları: ${k.risk_uyarilari.join(' · ')}` : '') +
     (k.lehte ? `\n  Lehte: ${k.lehte}` : '') + (k.aleyhte ? `\n  Aleyhte: ${k.aleyhte}` : '') +
     (k.elestiri ? `\n  Eleştiri: ${k.elestiri}` : '');
 }

@@ -2,7 +2,8 @@
 // Çekim sayfada gelen TÜM günlerin maçlarını kaydeder; "tarih" yalnızca açılmaya çalışılan gün sekmesidir.
 import { istanbulDate } from '../db.js';
 import { loadBulletinPage, BotKorumasiHatasi, HizLimitiHatasi } from './scraper.js';
-import { parseApiResponses } from './parseApi.js';
+import { parseApiResponses, extractParts } from './parseApi.js';
+import { detaylariCek, pazarAdlariniSakla } from './detay.js';
 import { parseHtml, parseUpload } from './parseText.js';
 import { saveBulletin, bulletinStatus, varsayilanGun } from './store.js';
 
@@ -31,8 +32,16 @@ export async function refreshBulletin({ tarih = varsayilanGun(), force = false }
       const id = saveBulletin({ tarih, kaynak, matches: r.matches, errors: r.errors });
       const gunler = gunSayilari(r.matches);
       const hedef = gunler[tarih] ?? 0;
+      // Aday maçların detayından ek pazarlar (iki yarıda KG vb.); hata çekimi bozmaz
+      let detay = null;
+      if (hedef) {
+        const { marketConfig } = extractParts(page.jsonResponses);
+        pazarAdlariniSakla(marketConfig);
+        try { detay = await detaylariCek({ bultenId: id, gun: tarih, marketConfig }); }
+        catch (e) { detay = { hata: e.message }; }
+      }
       return {
-        ok: true, bulten_id: id, mac_sayisi: r.matches.length, hatali: r.errors.length, gunler,
+        ok: true, bulten_id: id, mac_sayisi: r.matches.length, hatali: r.errors.length, gunler, detay,
         hedef_gun: tarih, hedef_gun_mac: hedef,
         uyari: hedef ? null : `${tarih} için maç gelmedi (bülten o gün için henüz açılmamış olabilir). Gelen günler: ${Object.keys(gunler).join(', ')}.`,
         durum: bulletinStatus(tarih),

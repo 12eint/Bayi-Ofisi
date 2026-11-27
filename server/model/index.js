@@ -13,6 +13,9 @@ export function macModeliGetir(macId) {
   return kayit;
 }
 
+/** Maça yeni oran eklendiyse (ör. detay çekimi) önbelleği bırak */
+export function modelOnbellekSil(macId) { onbellek.delete(macId); }
+
 /** { model, piyasa, deger } – model kurulamazsa alanlar null */
 export function secimModeli(macId, bahis, secim, oran) {
   const { oranlar, model } = macModeliGetir(macId);

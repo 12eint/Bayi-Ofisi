@@ -6,6 +6,7 @@ import { gunBulteni, listMatches, varsayilanGun } from '../bulletin/store.js';
 import { refreshBulletin } from '../bulletin/index.js';
 import { buildHandlers } from './handlers.js';
 import { listCoupons, getCoupon } from './rules.js';
+import { tabanPuan } from './puan.js';
 import { emit } from '../events.js';
 
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
@@ -16,6 +17,8 @@ const PROFIL = {
     sozler: ['Hey gidi günler... Favoriden şaşma evladım, gerisi Allah kerim.', 'Acele işe şeytan karışır yavrum. Bizim zamanımızda böyle kupon mu yazılırdı, ah ah.'] },
   'beyaz-hayalci': { bahisler: ['Maç Sonucu', 'Karşılıklı Gol', 'Alt/Üst 2.5'], min: 1.55, max: 2.40, risk: 'orta',
     sozler: ['Abicim bi düşünsene yaaa, bu tutarsa anneme bulaşık makinesi alıcam.', 'İçimde bi his var, inşallah bu sefer... Hayal etmesi bedava abicim.'] },
+  'inatci-eniste': { bahisler: ['1. Yarı ve 2. Yarıda Karşılıklı Gol Olur'], secimler: ['Evet / Evet'], min: 10, max: 60, risk: 'çok yüksek',
+    sozler: ['Siz gülün bakalım... İki yarı, iki gol, iki takım. Ben bu bahisten dönmem.', 'Geçen sefer bir golle kaçtı, olsun. Bende sabır çok.'] },
   'hizli-genc': { bahisler: ['Maç Sonucu', 'Karşılıklı Gol', 'Alt/Üst 2.5', 'Alt/Üst 3.5'], min: 1.9, max: 4.2, risk: 'çok yüksek',
     sozler: ['Aga bak yazıyorum buraya, kasa dönüyo! Gelirse mahalleye kahve benden.', 'Kanka sürpriz yoksa heyecan da yok, yatarsa yatsın reis!'] },
 };
@@ -31,7 +34,7 @@ function candidates(bultenId, gun, ajan, talimat, settings, used) {
   const out = [];
   for (const m of rows) {
     if (used.has(m.mac_kodu)) continue;
-    const opts = m.oranlar.filter(o => p.bahisler.includes(o.bahis) && o.oran >= Math.max(p.min, settings.tekMacMinOran) && o.oran <= Math.min(p.max, settings.tekMacMaxOran));
+    const opts = m.oranlar.filter(o => p.bahisler.includes(o.bahis) && (!p.secimler || p.secimler.includes(o.secim)) && o.oran >= Math.max(p.min, settings.tekMacMinOran) && o.oran <= Math.min(p.max, settings.tekMacMaxOran));
     if (!opts.length) continue;
     opts.sort((a, b) => ajan === 'yasli-dayi' ? a.oran - b.oran : b.oran - a.oran);
     const o = ajan === 'hizli-genc' ? opts[Math.floor(Math.random() * opts.length)] : opts[0];
@@ -100,13 +103,14 @@ async function critic(h, oturumId) {
     await wait(500);
     const zayif = [...k.secimler].sort((a, b) => b.oran - a.oran)[0];
     const ayniLig = k.secimler.length - new Set(k.secimler.map(s => s.lig)).size;
-    const hedef = { 'yasli-dayi': 7, 'beyaz-hayalci': 6, 'hizli-genc': 4 }[k.ajan] ?? 5;
-    const puan = Math.max(1, Math.min(10, hedef - (ayniLig > 1 ? 1 : 0) - (zayif.oran > 3 ? 2 : 0) + (k.revize_of ? 1 : 0)));
+    // Puan cetveli: taban puan ±1 (aynı ligden çok seçim −1, revizyon +1)
+    const taban = tabanPuan(k).puan;
+    const puan = Math.max(1, Math.min(10, taban - (ayniLig > 1 ? 1 : 0) + (k.revize_of ? 1 : 0)));
     const isaret = puan < 5 ? [zayif.mac_kodu] : [];
     await h.kupon_puanla.run({
       kupon_id: k.id, puan, degistirilmeli: isaret,
       lehte: `En düşük oranlı seçim ${[...k.secimler].sort((a, b) => a.oran - b.oran)[0].oran}; kuponun omurgası favorilerden.`,
-      aleyhte: `Ama ${zayif.mac_kodu} @ ${zayif.oran} tek başına kuponu yakabilir.` + (k.risk_uyarilari?.length ? ` Risk kurulu da uyarmış: ${k.risk_uyarilari[0]}.` : ''),
+      aleyhte: `Ama ${zayif.mac_kodu} @ ${zayif.oran} tek başına kuponu yakabilir.` + (k.risk_uyarilari?.length ? ` Nikah Dairesi de uyarmış: ${k.risk_uyarilari[0]}.` : ''),
       elestiri: `Zayıf halka ${zayif.mac_kodu} (${zayif.mac_adi}, ${zayif.oran}): ima edilen ihtimal ~%${Math.round(100 / zayif.oran)}.` +
         (ayniLig > 1 ? ` Aynı ligden ${ayniLig + 1} seçim var, sonuçlar birbirine bağımlı olabilir.` : '') +
         ` (Deneme modu: puan kural tabanlıdır, gerçek analiz değildir.)`,

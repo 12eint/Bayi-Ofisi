@@ -9,6 +9,7 @@ import { istanbulDate, istanbulTime } from '../db.js';
 const FALLBACK_MARKETS = {
   '1_1': 'Maç Sonucu', '2_88': '1. Yarı Sonucu', '2_101': 'Alt/Üst {0}', '2_89': 'Karşılıklı Gol',
   '2_3': 'Çifte Şans', '2_4': 'Toplam Gol Aralığı', '2_7': 'Maç Sonucu ve Alt/Üst {0}',
+  '2_866': '1. Yarı ve 2. Yarıda Karşılıklı Gol Olur', '2_861': 'Ev Sahibi Her İki Yarıda da Gol Atar', '2_862': 'Deplasman Her İki Yarıda da Gol Atar',
 };
 
 export function extractParts(jsonResponses) {
@@ -25,7 +26,7 @@ export function extractParts(jsonResponses) {
   return { events, marketConfig, competitions };
 }
 
-function marketName(cfg, m) {
+export function marketName(cfg, m) {
   const key = `${m.t}_${m.st}`;
   let n = cfg[key]?.n ?? FALLBACK_MARKETS[key] ?? `Bahis ${key}`;
   if (/\{0\}|\{h\}/.test(n)) n = n.replace(/\{0\}|\{h\}/g, m.sov ?? '').replace(/\s+/g, ' ');

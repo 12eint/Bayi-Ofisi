@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { db, kvGet, kvSet, istanbulDate, butceDolu, sistemPayiOlc, sistemCalismaBitti } from '../db.js';
 import { getSettings } from '../settings.js';
 import { emit } from '../events.js';
+import { AGENTS } from './definitions.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const AJAN_ARACI = new Set(['Agent', 'Task']);
@@ -77,12 +78,12 @@ export async function gelenKutusunuIsle() {
     // Önceki konuşma bu bilgisayarda yoksa (zip'le taşındı vb.) yeni konuşmayla bir kez daha dene
     if (r?.yenidenDene) await calistir(yol, mesajlar, { devamEt: false });
   }
-  catch (e) { kvSet('cli_son_hata', e.message); paneleYaz(`Genel Müdür'e ulaşılamadı: ${e.message}`); }
+  catch (e) { kvSet('cli_son_hata', e.message); paneleYaz(`Harambe'ye ulaşılamadı: ${e.message}`); }
   finally {
     // cevapsız kalanlar tekrar sıraya (giriş hatası vb. durumda kaybolmasın)
     calisiyor = false; aktifSurec = null;
     emit('ajan_durum', { ajan: 'genel-mudur', durum: 'masada', calisiyor: false });
-    for (const k of ['yasli-dayi', 'hizli-genc', 'beyaz-hayalci', 'cok-bilen-kardes']) emit('ajan_durum', { ajan: k, durum: 'masada', calisiyor: false });
+    for (const k of Object.keys(AGENTS)) emit('ajan_durum', { ajan: k, durum: 'masada', calisiyor: false });
     if (tekrar) { tekrar = false; setTimeout(gelenKutusunuIsle, 500); }
   }
 }
@@ -157,7 +158,7 @@ Her mesaja cevabını mcp__bayi__cevap_yaz ile (mesaj_id vererek) yaz; kupon tur
       const cevapsiz = db.prepare(`SELECT id FROM gelen_kutusu WHERE durum != 'cevaplandi' AND id IN (${mesajlar.map(() => '?').join(',')})`).all(...mesajlar.map(m => m.id));
       if (cevapsiz.length) {
         db.prepare(`UPDATE gelen_kutusu SET durum = 'cevaplandi' WHERE id IN (${cevapsiz.map(() => '?').join(',')})`).run(...cevapsiz.map(r => r.id));
-        paneleYaz(metin.trim() || (sonuc?.is_error ? 'Genel Müdür işi tamamlayamadı.' : 'Tamam patron.'));
+        paneleYaz(metin.trim() || (sonuc?.is_error ? 'Harambe işi tamamlayamadı.' : 'Tamam patron.'));
       }
       resolve();
     });

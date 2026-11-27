@@ -103,8 +103,18 @@ Sonra her seferinde sadece `baslat.cmd` (ya da `npm start`). Sağ üstteki rozet
 - Sayfanın **kendi yüklediği** bülten verisini (JSON) dinler; maç kodu, takımlar, lig, saat, tüm maç öncesi bahisler, oranlar ve MBS buradan okunur. Bu başarısız olursa sayfanın HTML'inden okur.
 - Yarının tarihi seçilmeye çalışılır; ayrıca maçlar İstanbul saatine göre yarına filtrelenir.
 - **Kurallar:** giriş yok, hesap yok, sepete ekleme yok (giriş/sepet/ödeme adreslerine giden istekler engellenir). İki çekim arasında en az **2 saat**, günde en fazla **4** çekim.
+- **Maç detayı:** Program sayfası her maç için yalnızca temel bahisleri verir. "1. Yarı ve 2. Yarıda Karşılıklı Gol Olur" gibi pazarlar maçın detayındadır. Her çekimden sonra model bu bahsin en olası olduğu **15 aday maçı** seçer ve yalnızca onların detayını okur (istekler arası ~1,5-2 sn; iddaa 403/429/503 dönerse hemen durur). Bülten tazeyken detay eksikse Genel Müdür `bulten_detay_cek` aracıyla (gün başına saatte en fazla bir kez) okur. Ayar: `settings.js` → `detayCekim`.
 - **Bot koruması / CAPTCHA** görülürse aşmaya çalışılmaz: işlem durur ve "Bülteni Yükle" önerilir.
 - Okunamayan satırlar *Bülten* sekmesinde nedenleriyle listelenir.
+
+### Dış veri: ESPN (form, bağımsız güç modeli, otomatik sonuç)
+
+- Kaynak: ESPN'in herkese açık veri adresi (`site.api.espn.com`). Yanıtlar `dis_onbellek` tablosunda önbelleklenir (puan durumu 12 saat, takım fikstürü 6 saat, biten günün sonuçları 7 gün).
+- **Bağımsız güç modeli:** Puan durumundaki atılan/yenilen gollerden, iddaa oranı kullanılmadan maç olasılıkları (1/0/2, Üst 2.5, KG, iki yarıda KG). Ajanlar bunu `mac_detay` içinde görür ve oran modeliyle karşılaştırır.
+- **Takım formu:** `takim_formu` aracı iki takımın puan durumu ve son 6 maçını verir.
+- **Otomatik sonuç:** Saatte bir (ve Geçmiş sekmesindeki **Sonuçları ESPN'den getir** düğmesiyle) biten kupon maçlarının skoru **ilk yarı dahil** girilir; İY, İY/MS, 2. yarı ve iki yarıda KG bahisleri de otomatik değerlendirilir. Elle skor girerken ilk yarıyı da yazabilirsin.
+- Kapsam: büyük Avrupa ligleri, Türkiye, UEFA kupaları, MLS, Brezilya, Meksika vb. (`server/veri/espn.js` → `LIGLER`). Alt ve egzotik liglerde veri yoktur.
+- Not: Bu ağdan football-data.co.uk (erişim engeli), ClubElo veri adresi (zaman aşımı), Understat (hata sayfası), FBref ve Sofascore (403) kullanılamadı.
 
 ### Bülteni Yükle (yedek yöntem)
 
@@ -120,9 +130,10 @@ Sonra her seferinde sadece `baslat.cmd` (ya da `npm start`). Sağ üstteki rozet
 | | Ajan | Görev | Varsayılan aralık |
 |---|---|---|---|
 | 🎩 | **Genel Müdür** | Talimatı yorumlar, bülteni kontrol eder, işi dağıtır, eleştirtir, revize ettirir, rapor verir | – |
-| 👴 | **Yaşlı Dayı** | Temkinli, favori ağırlıklı | oran 2.00–5.00, 2–4 maç |
-| ⚡ | **Hızlı Genç** | Yüksek oran avcısı (100 TL → ~50.000 TL) | oran 300–800, 6–14 maç |
-| ☁️ | **Beyaz Hayalci** | Orta yol (100 TL → 2.000–5.000 TL) | oran 20–50, 3–7 maç |
+| 👴 | **Yaşlı Dayı** | Cebindeki son parayı basacak kadar güvendiği maçlar; az maç, net favori | oran 2.00–5.00, 2–4 maç |
+| ⚡ | **Hızlı Genç** | Tek hayali zengin olmak; garip bahisler (İY/MS dönüşü, MS+KG, iki yarıda KG...) | oran 300–800, 6–14 maç |
+| ☁️ | **Beyaz Hayalci** | Gözden çıkardığı parayla oynar ama kazanmak zorunda: hedef orana en az maçla, en olası sonuçlarla | oran 20–50, 3–7 maç |
+| 🎯 | **İnatçı Enişte** | Yalnızca "1. Yarı ve 2. Yarıda Karşılıklı Gol Olur: Evet / Evet" (kodla zorunlu; MBS 2 → en az 2 maç) | oran 30–1000, 2–3 maç |
 | 🧐 | **Çok Bilen Kardeş** | Eleştirmen; 1–10 puan, "değiştirilmeli" işaretler | – |
 
 Tüm aralıklar, tutarlar, kupon sayıları, tek maç oran sınırı, lig filtreleri, MBS kuralı ve günlük bütçe **Ayarlar** sekmesinden değiştirilir.

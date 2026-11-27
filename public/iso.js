@@ -46,6 +46,8 @@ const KADRO = {
   'hizli-genc':       { masa: [6.2, 2.0], renk: '#c62828', renkKoyu: '#8e1b1b', kol: '#d23a3a' },
   'beyaz-hayalci':    { masa: [2.0, 4.6], renk: '#9fb8e8', renkKoyu: '#7690c4', kol: '#b3c8ef' },
   'cok-bilen-kardes': { masa: [4.8, 4.6], renk: '#6b4a1f', renkKoyu: '#4d3414', kol: '#7d5827' },
+  'inatci-eniste':    { masa: [3.2, 6.5], renk: '#7b3fa0', renkKoyu: '#5c2d78', kol: '#8a4bb0' },
+  'spor-totocu':      { masa: [5.9, 6.2], renk: '#1b6e8f', renkKoyu: '#14526b', kol: '#2580a3' },   // eski tavla masası
 };
 const yerOf = (k) => { const d = KADRO[k]; return d.ayakta ? d.yer : [d.masa[0] + 0.75, d.masa[1] - 0.15]; };
 const TAVLA = [5.9, 6.2];
@@ -63,7 +65,8 @@ const GIZMO_DURAKLAR = [
   { kime: 'yasli-dayi',       yol: [[5.45, 3.95], [5.45, 1.5], [4.75, 1.5]] },
   { kime: 'beyaz-hayalci',    yol: [[3.3, 3.95]] },
   { kime: 'cok-bilen-kardes', yol: [[6.1, 3.95]] },
-  { kime: 'tavla',            yol: [[7.75, 6.5]] },
+  { kime: 'inatci-eniste',    yol: [[4.4, 3.95], [4.4, 6.25], [4.85, 6.45]] },
+  { kime: 'spor-totocu',      yol: [[7.75, 6.5]] },
 ];
 // Risk Kurulu: sağ arka köşedeki denetim masası. Kupon kaydedilmeden önceki kod denetiminin sahnedeki yüzü.
 const RISK_MASA = [8.3, 0.7];
@@ -349,12 +352,22 @@ export function createIsoOffice(root) {
         px(hx + 2, hy + 4, 1, 1, '#bfe3ff'); px(hx + 5, hy + 4, 1, 1, '#bfe3ff');
         if (o.eleştiri) px(hx + 3, hy + 7, 3, 1, PAL.göz);
         break;
+      case 'spor-totocu':   // kır saç, ince çerçeveli gözlük, kulağında kalem, gri bıyık
+        px(hx - 1, hy - 2, 10, 2, '#b9b9b9'); px(hx - 1, hy, 1, 3, '#b9b9b9'); px(hx + 8, hy, 1, 3, '#b9b9b9');
+        if (!o.arka) { px(hx + 1, hy + 3, 3, 2, '#3a3a3a'); px(hx + 4, hy + 3, 3, 2, '#3a3a3a'); px(hx + 2, hy + 3, 1, 1, '#d9ecff'); px(hx + 5, hy + 3, 1, 1, '#d9ecff'); px(hx + 1, hy + 6, 6, 1, '#8a8a8a'); }
+        px(hx + 8, hy - 1, 1, 4, '#ffcc00'); px(hx + 8, hy - 2, 1, 1, '#c62828');
+        break;
       case 'amca1':   // kel, kır yan saç, kalın bıyık
         px(hx - 1, hy + 1, 1, 4, '#cfcfcf'); px(hx + 8, hy + 1, 1, 4, '#cfcfcf'); px(hx + 1, hy + 6, 6, 1, '#555'); break;
       case 'amca2':   // arkası dönük, kasketli
         px(hx - 1, hy - 2, 10, 3, '#3a3a3a'); break;
       case 'çaycı':   // siyah saç, bıyık
         px(hx - 1, hy - 2, 10, 3, '#1a1a1a'); if (!o.arka) px(hx + 2, hy + 6, 4, 1, '#1a1a1a'); break;
+      case 'inatci-eniste':   // geriye taranmış koyu saç, kır şakaklar, kalın pala bıyık, boynunda şans atkısı
+        px(hx - 1, hy - 2, 10, 3, '#3a2a1e'); px(hx - 1, hy + 1, 1, 3, '#9a9a9a'); px(hx + 8, hy + 1, 1, 3, '#9a9a9a');
+        if (!o.arka) { px(hx, hy + 6, 8, 2, '#2a1a10'); px(hx - 1, hy + 7, 1, 1, '#2a1a10'); px(hx + 8, hy + 7, 1, 1, '#2a1a10'); }
+        px(hx - 1, hy + 9, 10, 2, '#c62828'); px(hx + 1, hy + 9, 2, 2, '#f4f1ea'); px(hx + 5, hy + 9, 2, 2, '#f4f1ea');
+        break;
       case 'risk-kurulu':   // denetçi: tepesi açık, kır yan saç, kalın siyah çerçeveli gözlük, papyon
         px(hx - 1, hy - 1, 1, 5, '#b9b9b9'); px(hx + 8, hy - 1, 1, 5, '#b9b9b9'); px(hx + 1, hy - 2, 6, 1, '#d9a066');
         px(hx, hy + 3, 4, 2, '#111'); px(hx + 4, hy + 3, 4, 2, '#111'); px(hx + 1, hy + 3, 2, 1, '#cfe6ff'); px(hx + 5, hy + 3, 2, 1, '#cfe6ff');
@@ -497,7 +510,6 @@ export function createIsoOffice(root) {
   function çiz(t) {
     const dt = önceki ? Math.min(200, t - önceki) : 66; önceki = t;
     çaycıYürü(dt); gizmoYürü(dt);
-    if (kare % 45 === 0) zar = [1 + Math.floor(Math.random() * 6), 1 + Math.floor(Math.random() * 6)];
     ctx.fillStyle = '#1a1512'; ctx.fillRect(0, 0, W, H);
     duvarlar(t); pencereVeTabela(t); tvler(t); zemin();
     const n = [];
@@ -508,11 +520,6 @@ export function createIsoOffice(root) {
       n.push({ key: k === 'genel-mudur' ? KASA.x + KASA.y + KASA.w + KASA.d : cx + cy, f: () => ajan(k, t) });
       if (KADRO[k].masa) { const [x, y] = KADRO[k].masa; n.push({ key: x + y + MASA * 2 - 0.6, f: () => kuponMasası(k, t) }); }
     }
-    // tavla oynayan amcalar: biri masanın arkasında (yüzü bize), biri önünde (sırtı bize)
-    const [tx, ty] = TAVLA;
-    n.push({ key: tx + 0.7 + ty - 0.15, f: () => { const [a, b] = P(tx + 0.7, ty - 0.15); insan(a, b, { tip: 'amca1', renk: '#6b5640', renkKoyu: '#4f3f2e', kol: '#7a634a', tavla: true, faz: 1 }, t); } });
-    n.push({ key: tx + ty + MASA * 2 - 0.6, f: () => tavlaMasası(t) });
-    n.push({ key: tx + 0.4 + ty + 1.75, f: () => { sandalye(tx + 0.45, ty + 1.55, true); const [a, b] = P(tx + 0.68, ty + 1.75); insan(a, b, { tip: 'amca2', arka: true, saç: '#9a9a9a', renk: '#3c4a6b', renkKoyu: '#2a3550', kol: '#46557a', tavla: true, faz: 3 }, t); } });
     n.push({ key: çaycı.x + çaycı.y, f: () => { const [a, b] = P(çaycı.x, çaycı.y); insan(a, b, { tip: 'çaycı', ayakta: true, yürü: çaycı.bekle <= 0, tepsi: true, renk: '#f4f1ea', renkKoyu: '#d9d3c4', kol: '#f4f1ea', yelek: '#1a1a1a', pantolon: '#1a1a1a' }, t); } });
     n.push({ key: RISK_YER[0] + RISK_YER[1], f: () => riskKişi(t) });
     n.push({ key: RISK_MASA[0] + RISK_MASA[1] + MASA * 2 - 0.6, f: () => riskMasası(t) });
@@ -634,7 +641,7 @@ export function createIsoOffice(root) {
   // Risk Kurulu etiketi
   const riskEtiket = document.createElement('div');
   riskEtiket.className = 'iso-etiket iso-etiket-risk';
-  riskEtiket.innerHTML = '<b>Risk Kurulu</b><span></span>';
+  riskEtiket.innerHTML = '<b>Nikah Dairesi</b><span></span>';
   katman.appendChild(riskEtiket); etiketler['risk-kurulu'] = riskEtiket;
   let riskZaman = null;
   function riskKarar({ durum, ajan, etiketler: et = [], kupon_id }) {

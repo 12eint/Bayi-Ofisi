@@ -11,6 +11,8 @@ const KADRO = {
   'hizli-genc':       { masa: [6.2, 2.0], renk: '#c62828', kol: '#d23a3a' },
   'beyaz-hayalci':    { masa: [2.0, 4.6], renk: '#9fb8e8', kol: '#b3c8ef' },
   'cok-bilen-kardes': { masa: [4.8, 4.6], renk: '#6b4a1f', kol: '#7d5827' },
+  'inatci-eniste':    { masa: [3.2, 6.5], renk: '#7b3fa0', kol: '#8a4bb0' },
+  'spor-totocu':      { masa: [5.9, 6.2], renk: '#1b6e8f', kol: '#2580a3' },   // eski tavla masası
 };
 const yerOf = (k) => { const d = KADRO[k]; return d.ayakta ? d.yer : [d.masa[0] + 0.75, d.masa[1] - 0.15]; };
 const TAVLA = [5.9, 6.2];
@@ -24,7 +26,8 @@ const GIZMO_DURAKLAR = [
   { kime: 'yasli-dayi',       yol: [[5.45, 3.95], [5.45, 1.5], [4.75, 1.5]], bak: [3.95, 1.85] },
   { kime: 'beyaz-hayalci',    yol: [[3.3, 3.95]],                           bak: [2.75, 4.45] },
   { kime: 'cok-bilen-kardes', yol: [[6.1, 3.95]],                           bak: [5.55, 4.45] },
-  { kime: 'tavla',            yol: [[7.75, 6.5]],                           bak: [6.6, 6.9] },
+  { kime: 'inatci-eniste',    yol: [[4.4, 3.95], [4.4, 6.25], [4.85, 6.45]], bak: [3.95, 6.35] },
+  { kime: 'spor-totocu',      yol: [[7.75, 6.5]],                           bak: [6.65, 6.05] },
 ];
 const GIZMO_LAFLAR = ['Bonjour!', 'Tutarsa küsüratı benim!', 'Başar hocam!', 'Bu 50 lirayı kaç para yapabiliriz?', 'Bugün tıraş yine yok.'];
 const RISK_MASA = [8.3, 0.7];
@@ -274,6 +277,11 @@ export function createOfis3D(root) {
         s(0.11, 0.08, 0.02, '#111', -0.075, 0.15, 0.165); s(0.11, 0.08, 0.02, '#111', 0.075, 0.15, 0.165); s(0.04, 0.02, 0.02, '#111', 0, 0.17, 0.165);
         s(0.07, 0.04, 0.01, '#bfe3ff', -0.075, 0.17, 0.176); s(0.07, 0.04, 0.01, '#bfe3ff', 0.075, 0.17, 0.176);
         kutu(p.g, 0.12, 0.6, 0.01, '#efe6d0', 0, p.kalça, 0.136, false); kutu(p.g, 0.04, 0.12, 0.01, '#c62828', -0.06, p.kalça + 0.4, 0.14, false); break;
+      case 'spor-totocu':
+        s(0.34, 0.06, 0.33, '#b9b9b9', 0, 0.32, -0.01); s(0.03, 0.12, 0.22, '#b9b9b9', -0.17, 0.16, -0.03); s(0.03, 0.12, 0.22, '#b9b9b9', 0.17, 0.16, -0.03);
+        s(0.11, 0.06, 0.02, '#3a3a3a', -0.075, 0.15, 0.165); s(0.11, 0.06, 0.02, '#3a3a3a', 0.075, 0.15, 0.165); s(0.15, 0.03, 0.02, '#8a8a8a', 0, 0.09, 0.16);
+        s(0.03, 0.03, 0.18, '#ffcc00', 0.18, 0.22, 0.02);
+        break;
       case 'amca1':
         s(0.03, 0.14, 0.22, '#cfcfcf', -0.17, 0.14, -0.03); s(0.03, 0.14, 0.22, '#cfcfcf', 0.17, 0.14, -0.03); s(0.17, 0.04, 0.02, '#555', 0, 0.1, 0.16); break;
       case 'amca2':
@@ -285,6 +293,11 @@ export function createOfis3D(root) {
         s(0.05, 0.46, 0.3, '#7a1f0c', -0.18, -0.12, -0.02); s(0.05, 0.46, 0.3, '#5c1608', 0.18, -0.12, -0.02); s(0.34, 0.5, 0.06, '#6b1a0a', 0, -0.16, -0.17);
         p.para = new THREE.Group(); p.kolSağ.add(p.para); p.para.position.set(0, -0.68, 0.05); p.para.visible = false;
         kutu(p.para, 0.26, 0.13, 0.01, '#e3923a', 0.08, 0, 0, false); kutu(p.para, 0.06, 0.06, 0.012, '#a85a14', 0.02, 0.035, 0, false); break;
+      case 'inatci-eniste':
+        s(0.34, 0.08, 0.33, '#3a2a1e', 0, 0.32, -0.01); s(0.03, 0.14, 0.22, '#9a9a9a', -0.17, 0.16, -0.03); s(0.03, 0.14, 0.22, '#9a9a9a', 0.17, 0.16, -0.03);
+        s(0.24, 0.05, 0.03, '#2a1a10', 0, 0.09, 0.16); s(0.04, 0.06, 0.03, '#2a1a10', -0.12, 0.05, 0.16); s(0.04, 0.06, 0.03, '#2a1a10', 0.12, 0.05, 0.16);
+        kutu(p.g, 0.5, 0.1, 0.3, '#c62828', 0, p.kalça + 0.52, 0, false); kutu(p.g, 0.1, 0.35, 0.04, '#c62828', 0.12, p.kalça + 0.2, 0.15, false); kutu(p.g, 0.1, 0.06, 0.045, '#f4f1ea', 0.12, p.kalça + 0.3, 0.15, false);
+        break;
       case 'risk-kurulu':
         s(0.03, 0.16, 0.24, '#b9b9b9', -0.17, 0.14, -0.03); s(0.03, 0.16, 0.24, '#b9b9b9', 0.17, 0.14, -0.03);
         s(0.13, 0.09, 0.025, '#111', -0.075, 0.15, 0.165); s(0.13, 0.09, 0.025, '#111', 0.075, 0.15, 0.165);
@@ -309,14 +322,6 @@ export function createOfis3D(root) {
     }
     kişiler[k] = insan({ tip: k, x, z, ayakta: d.ayakta, yön: d.yon ?? 0, renk: d.renk, kol: d.kol });
   }
-  // tavla
-  masa(TAVLA[0], TAVLA[1], { çuha: true });
-  kutu(sahne, 0.8, 0.04, 0.7, '#c08a4a', TAVLA[0] + 0.7, MASA_Y, TAVLA[1] + 0.7); kutu(sahne, 0.03, 0.045, 0.7, '#5a3418', TAVLA[0] + 0.7, MASA_Y, TAVLA[1] + 0.7);
-  const zarlar = [0, 1].map(i => kutu(sahne, 0.07, 0.07, 0.07, '#ffffff', TAVLA[0] + 0.55 + i * 0.14, MASA_Y + 0.04, TAVLA[1] + 0.75));
-  bardak(sahne, TAVLA[0] + 1.2, MASA_Y, TAVLA[1] + 0.25); bardak(sahne, TAVLA[0] + 0.2, MASA_Y, TAVLA[1] + 1.2);
-  sandalye(TAVLA[0] + 0.7, TAVLA[1] - 0.2); sandalye(TAVLA[0] + 0.7, TAVLA[1] + 1.65, Math.PI);
-  const amca1 = insan({ tip: 'amca1', x: TAVLA[0] + 0.7, z: TAVLA[1] - 0.15, renk: '#6b5640', kol: '#7a634a' });
-  const amca2 = insan({ tip: 'amca2', x: TAVLA[0] + 0.7, z: TAVLA[1] + 1.6, yön: Math.PI, renk: '#3c4a6b', kol: '#46557a' });
 
   // kasa + yazıcı + fiş yığını
   const kasa = new THREE.Group(); sahne.add(kasa);
@@ -379,7 +384,7 @@ export function createOfis3D(root) {
     katman.appendChild(e); etiketler[k] = e; return e;
   }
   etiketYap('gizmo', 'Gizmo', 'iso-etiket-gizmo');
-  const riskEtiket = etiketYap('risk-kurulu', 'Risk Kurulu', 'iso-etiket-risk');
+  const riskEtiket = etiketYap('risk-kurulu', 'Nikah Dairesi', 'iso-etiket-risk');
   const v = new THREE.Vector3();
   const kişiOf = (k) => k === 'gizmo' ? gizmoK : k === 'risk-kurulu' ? riskK : kişiler[k];
   const ekranlar = {};
@@ -526,13 +531,8 @@ export function createOfis3D(root) {
     const dt = önceki ? Math.min(200, t - önceki) : 16; önceki = t; kare++;
     çaycıAdım(dt, t); gizmoAdım(dt, t);
     for (const k of Object.keys(KADRO)) { ajanAnim(k, t); göz(kişiler[k], t, k.length); }
-    göz(gizmoK, t, 2); göz(riskK, t, 5); göz(amca1, t, 1);
+    göz(gizmoK, t, 2); göz(riskK, t, 5);
     riskAnim(t); uçanAdım(t);
-    // tavla: amcalar sırayla zar atar
-    const atış = Math.floor(t / 2100) % 2;
-    amca1.kolSağ.rotation.x = atış === 0 ? -1.1 + Math.sin(t / 120) * 0.15 : -0.8; amca1.kolSol.rotation.x = -0.8;
-    amca2.kolSağ.rotation.x = atış === 1 ? -1.1 + Math.sin(t / 120) * 0.15 : -0.8; amca2.kolSol.rotation.x = -0.8;
-    if (kare % 120 === 0) zarlar.forEach(z => { z.rotation.set(Math.random() * 3, Math.random() * 3, 0); });
     // çay buharı, kedi kuyruğu, neon titreme, saat
     buharlar.forEach((b, i) => { const f = ((t / 1400) + i / 3) % 1; b.position.set(0.75 + Math.sin(t / 300 + i) * 0.04, 1.32 + f * 0.45, 0.55); b.material.opacity = 0.5 * (1 - f); b.scale.setScalar(0.6 + f); });
     kuyruk.rotation.y = Math.sin(t / 700) * 0.4;

@@ -6,14 +6,15 @@ import { fileURLToPath } from 'node:url';
 import { db, tomorrow, istanbulDate, nowIso, gmDurumu as gmDurumuHam, butceDolu } from './db.js';
 import { execFile } from 'node:child_process';
 import { getSettings, saveSettings } from './settings.js';
-import { bus, startDbRelay } from './events.js';
+import { bus, startDbRelay, emit } from './events.js';
 import { refreshBulletin, importBulletin } from './bulletin/index.js';
 import { bulletinStatus, gunBulteni, listMatches, varsayilanGun, bultenGunleri } from './bulletin/store.js';
 import { eksikModelleriDoldur } from './model/index.js';
 import { runOffice, stopOffice, isBusy, officeMode } from './agents/orchestrator.js';
 import { listCoupons, getCoupon } from './agents/rules.js';
 import { AGENTS, GM } from './agents/definitions.js';
-import { enterScore, setSelectionResult, history, agentStats, pendingMatches } from './stats.js';
+import { totoProgrami, totoKuponlari, totoSonuclariGuncelle } from './toto.js';
+import { enterScore, setSelectionResult, history, agentStats, pendingMatches, sonuclariOtomatikGetir, tutmaKarnesi, eksikBagimsizDoldur, genelIstatistik } from './stats.js';
 import { gelenKutusunuIsle, cliDurumu, girisKontrol, durdur as cliDurdur } from './agents/cli-runner.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -97,12 +98,21 @@ app.post('/api/kupon/:id/iptal', wrap((req) => {
   return { ok: true };
 }));
 
-app.get('/api/gecmis', wrap((req) => ({ gunler: history({ gun: Number(req.query.gun) || 60 }), istatistik: agentStats(), bekleyen: pendingMatches() })));
+app.get('/api/gecmis', wrap((req) => ({ gunler: history({ gun: Number(req.query.gun) || 60 }), istatistik: agentStats(), bekleyen: pendingMatches(), karne: tutmaKarnesi(), genel: genelIstatistik() })));
 app.post('/api/sonuc/skor', wrap((req) => {
-  const { tarih, mac_kodu, ev, dep } = req.body;
+  const { tarih, mac_kodu, ev, dep, iy_ev = null, iy_dep = null } = req.body;
   if (!(Number.isInteger(ev) && Number.isInteger(dep) && ev >= 0 && dep >= 0)) throw new Error('Skor geçersiz.');
-  return enterScore(tarih, mac_kodu, ev, dep);
+  const iyVar = Number.isInteger(iy_ev) && Number.isInteger(iy_dep);
+  if (iyVar && (iy_ev > ev || iy_dep > dep || iy_ev < 0 || iy_dep < 0)) throw new Error('İlk yarı skoru maç sonu skorundan büyük olamaz.');
+  return enterScore(tarih, mac_kodu, ev, dep, iyVar ? iy_ev : null, iyVar ? iy_dep : null);
 }));
+// Spor Toto: güncel program + bu dönemin önerileri
+app.get('/api/toto', wrap(async () => {
+  let program = null; try { program = await totoProgrami(); } catch { /* iddaa'ya ulaşılamadı */ }
+  return { program, kuponlar: totoKuponlari({ donem: program?.donem }), ayar: getSettings().sporToto };
+}));
+// ESPN'den sonuçları (ilk yarı dahil) otomatik getir
+app.post('/api/sonuc/otomatik', wrap(() => sonuclariOtomatikGetir()));
 app.post('/api/sonuc/secim', wrap((req) => { setSelectionResult(Number(req.body.secim_id), req.body.sonuc ?? null); return { ok: true }; }));
 
 // Canlı ofis olayları (Server-Sent Events)
@@ -129,6 +139,11 @@ if (officeMode() === 'claude-code') {
   }, 10 * 60000);
 }
 
+// Saatte bir: biten kupon maçlarının sonucunu ESPN'den getir (sonucu bekleyen yoksa istek atılmaz)
+const otoSkor = () => totoSonuclariGuncelle().catch(() => 0).then(n => { if (n) emit('toto', {}); }).then(() => sonuclariOtomatikGetir()).then(r => { if (r.girilen) { console.log(`  Otomatik sonuç: ${r.girilen} maç girildi.`); emit('puan', {}); } }).catch(() => {});
+setTimeout(otoSkor, 60000); setInterval(otoSkor, 3600000);
+// Eski seçimlere bağımsız model olasılığı (karne için; ESPN puan durumu önbellekte)
+setTimeout(() => eksikBagimsizDoldur().then(n => n && console.log(`  Bağımsız olasılık: ${n} eski seçime eklendi.`)).catch(() => {}), 20000);
 try { const n = eksikModelleriDoldur(); if (n) console.log(`  Model olasılığı: ${n} eski kupona eklendi.`); }
 catch (e) { console.warn('  Model olasılığı eklenemedi:', e.message); }
 

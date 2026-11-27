@@ -82,6 +82,15 @@ export function yuklem(bahis, secim) {
   }
   if (bahis === 'Ev Sahibi Her İki Yarıyı Kazanır') return iki((h1, a1, h2, a2) => (h1 > a1 && h2 > a2) === (secim === 'Evet'));
   if (bahis === 'Deplasman Her İki Yarıyı Kazanır') return iki((h1, a1, h2, a2) => (a1 > h1 && a2 > h2) === (secim === 'Evet'));
+  // "Evet / Hayır": 1. yarıda KG var, 2. yarıda yok (iddaa seçim adı "1. yarı / 2. yarı")
+  if (bahis === '1. Yarı ve 2. Yarıda Karşılıklı Gol Olur') {
+    const [s1, s2] = secim.split('/').map(x => x.trim() === 'Evet');
+    return iki((h1, a1, h2, a2) => (h1 > 0 && a1 > 0) === s1 && (h2 > 0 && a2 > 0) === s2);
+  }
+  if ((m = bahis.match(/^(Ev Sahibi|Deplasman) Her İki Yarıda da Gol Atar$/))) {
+    const ev = m[1] === 'Ev Sahibi';
+    return iki((h1, a1, h2, a2) => (ev ? h1 > 0 && h2 > 0 : a1 > 0 && a2 > 0) === (secim === 'Evet'));
+  }
 
   return null;   // korner, kart vb. – modellenmez
 }

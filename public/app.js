@@ -318,6 +318,13 @@ function yuzdeYaz(p) {
   const x = p * 100;
   return '%' + (x >= 10 ? x.toFixed(0) : x >= 1 ? x.toFixed(1) : x.toFixed(2)).replace('.', ',');
 }
+// Değeri düz Türkçeyle: oran, maçın ihtimaline göre ne kadar veriyor
+function degerSozu(d) {
+  if (d == null) return '–';
+  return d >= 0 ? 'iyi (hakkını veriyor)' : d >= -0.10 ? 'normal' : d >= -0.20 ? 'biraz düşük' : 'düşük';
+}
+// Beklenen getiri → "uzun vadede 100 TL'nin ~67 TL'si geri döner"
+function getiriSozu(d) { return d == null ? '–' : `100 TL → ~${Math.max(0, Math.round(100 * (1 + d)))} TL`; }
 function degerYaz(d) { return d == null ? '–' : `${d >= 0 ? '+' : '−'}${Math.abs(d * 100).toFixed(0)}%`; }
 function degerSinif(d) { return d == null ? '' : d >= 0 ? 'deger-iyi' : d < -0.2 ? 'deger-kotu' : 'deger-orta'; }
 function puanRenk(p) { return p == null ? '#777' : p >= 7 ? '#0a7a3e' : p >= 5 ? '#b26a00' : '#c62828'; }
@@ -333,7 +340,7 @@ function fisHtml(k) {
         <div>${esc(s.mac_adi)}</div>
         <div class="s2"><span>${esc(s.bahis)}: <b>${esc(s.secim)}</b></span><span>${Number(s.oran).toFixed(2)}</span></div>
         ${canliSatir(k, s)}
-        ${s.model_olasilik != null ? `<div class="s3"><span>Model ${yuzdeYaz(s.model_olasilik)}</span><span class="${degerSinif(s.deger)}">değer ${degerYaz(s.deger)}</span></div>` : ''}
+        ${s.model_olasilik != null ? `<div class="s3" title="Teknik: model olasılığı ${yuzdeYaz(s.model_olasilik)}, değer ${degerYaz(s.deger)}"><span>Tutma ihtimali ${yuzdeYaz(s.model_olasilik)}</span><span class="${degerSinif(s.deger)}">oran ${degerSozu(s.deger)}</span></div>` : ''}
         ${s.gerekce ? `<div class="grc">${esc(s.gerekce)}</div>` : ''}</div>`).join('')}
     <div class="toplam">
       <div><span>Maç sayısı</span><span>${k.secimler.length}</span></div>
@@ -341,16 +348,16 @@ function fisHtml(k) {
       <div><span>Tutar</span><span>${tl(k.tutar)}</span></div>
       <div class="buyuk"><span>Olası kazanç</span><span>${tl(k.olasi_kazanc)}</span></div>
       <div><span>Risk</span><span>${esc(k.risk ?? '-')}</span></div>
-      ${k.model_olasilik != null ? `<div><span>Model tutma</span><span>${yuzdeYaz(k.model_olasilik)}</span></div>
-      <div><span>Beklenen getiri</span><span class="${degerSinif(k.beklenen_getiri)}">${degerYaz(k.beklenen_getiri)}</span></div>` : ''}
-      ${k.taban_puan != null ? `<div title="Puan cetvelinden kodla hesaplanan taban puan; Hakan Revio en fazla ±2 oynatabilir"><span>Taban puan → Revio</span><span>${k.taban_puan} → ${k.puan ?? '–'}</span></div>` : ''}
+      ${k.model_olasilik != null ? `<div title="Oranlardan hesaplanan, kuponun tamamının tutma ihtimali"><span>Kuponun tutma ihtimali</span><span>${yuzdeYaz(k.model_olasilik)}</span></div>
+      <div title="Teknik: beklenen getiri ${degerYaz(k.beklenen_getiri)}. Bu kupon çok kez oynansa, ortalamada yatırılan paranın ne kadarı geri döner."><span>Uzun vadede</span><span class="${degerSinif(k.beklenen_getiri)}">${getiriSozu(k.beklenen_getiri)}</span></div>` : ''}
+      ${k.taban_puan != null ? `<div title="Önce sistem kendi ölçüsüyle puan verir, Hakan Revio bunu en fazla 2 puan yukarı ya da aşağı oynatabilir"><span>Puan (sistem → Revio)</span><span>${k.taban_puan} → ${k.puan ?? '–'}</span></div>` : ''}
     </div>
     ${k.aciklama ? `<div class="aciklama">“${esc(k.aciklama)}”</div>` : ''}
-    ${k.risk_uyarilari?.length ? `<div class="risk-kurulu"><b>⚠ Nikah Dairesi</b>${k.risk_uyarilari.map(u => `<div>• ${esc(u)}</div>`).join('')}</div>` : ''}
+    ${k.risk_uyarilari?.length ? `<div class="risk-kurulu"><b>⚠ Nikah Dairesi (risk kontrolü)</b>${k.risk_uyarilari.map(u => `<div>• ${esc(u)}</div>`).join('')}</div>` : ''}
     ${k.lehte || k.aleyhte ? `<div class="tartisma">
-      ${k.lehte ? `<div class="lehte"><b>Lehte:</b> ${esc(k.lehte)}</div>` : ''}
-      ${k.aleyhte ? `<div class="aleyhte"><b>Aleyhte:</b> ${esc(k.aleyhte)}</div>` : ''}</div>` : ''}
-    ${k.elestiri ? `<div class="elestiri"><b>Hakan Revio${k.lehte ? ' (hüküm)' : ''}:</b> ${esc(k.elestiri)}</div>` : ''}
+      ${k.lehte ? `<div class="lehte"><b>👍 Güçlü yanı:</b> ${esc(k.lehte)}</div>` : ''}
+      ${k.aleyhte ? `<div class="aleyhte"><b>👎 Riski:</b> ${esc(k.aleyhte)}</div>` : ''}</div>` : ''}
+    ${k.elestiri ? `<div class="elestiri"><b>🧐 Hakan Revio'nun yorumu:</b> ${esc(k.elestiri)}</div>` : ''}
     <div class="barkod"></div>
     <div class="alt">YALNIZCA ÖNERİDİR · OYNANMIŞ KUPON DEĞİLDİR<br>Bahis risk içerir; bütçeni aşma.</div>
   </div>`;
@@ -366,7 +373,7 @@ function fisOzetHtml(k) {
       <span class="fo-satir"><span>Oran</span><b>${Number(k.toplam_oran).toFixed(2)}</b></span>
       <span class="fo-satir"><span>Tutar</span><b>${tl(k.tutar)}</b></span>
       <span class="fo-satir fo-kazanc"><span>Olası kazanç</span><b>${tl(k.olasi_kazanc)}</b></span>
-      ${k.model_olasilik != null ? `<span class="fo-satir" title="Poisson modeline göre kuponun tutma olasılığı (oranlardan hesaplanır)"><span>Model tutma</span><b>${yuzdeYaz(k.model_olasilik)}</b></span>` : ''}
+      ${k.model_olasilik != null ? `<span class="fo-satir" title="Oranlardan hesaplanan, kuponun tamamının tutma ihtimali"><span>Tutma ihtimali</span><b>${yuzdeYaz(k.model_olasilik)}</b></span>` : ''}
       ${(() => { const o = canliOzet(k); return o ? `<span class="fo-canli${o.tutan === o.toplam ? ' iyi' : ''}"><i class="canli-nokta"></i>Canlı: ${o.tutan}/${o.toplam} maç şu an tutuyor</span>` : ''; })()}
       ${k.risk_uyarilari?.length ? `<span class="fo-risk" title="${esc(k.risk_uyarilari.join(' · '))}">⚠ Nikah Dairesi: ${k.risk_uyarilari.length} uyarı</span>` : ''}
       <span class="fo-ac">Fişi aç ▸</span>

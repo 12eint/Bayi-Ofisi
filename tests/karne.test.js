@@ -18,7 +18,7 @@ const sec = (o = {}) => ({ mac_kodu: String(Math.random()).slice(2, 7), bahis: '
 
 test('iki model çelişkisi: 10-15 puan uyarı, 15 üstü ret, bağımsız yoksa sessiz', () => {
   const r1 = riskKurulu([sec({ model_olasilik: 0.62, bagimsiz_olasilik: 0.50 }), sec()], { gun: '2030-01-01', settings: S });
-  assert.match(r1.uyarilar.join(), /İki model çelişiyor/);
+  assert.match(r1.uyarilar.join(), /Şüpheli seçim/);
   assert.equal(r1.hatalar.length, 0);
   const r2 = riskKurulu([sec({ model_olasilik: 0.70, bagimsiz_olasilik: 0.45 }), sec()], { gun: '2030-01-01', settings: S });
   assert.match(r2.hatalar.join(), /iki model çelişiyor/);

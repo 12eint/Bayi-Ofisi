@@ -35,8 +35,8 @@ export const KUPON_AJAN_ENUM = KUPON_AJANLARI;
 // Hedef gün: patron hangi günü istediyse o. Verilmezse bugün (başlamamış maç varsa), yoksa bültendeki sonraki gün.
 const hedefTarih = (tarih) => tarih || varsayilanGun();
 // Risk kurulu mesajlarından sahnedeki balon için kısa etiketler
-const RISK_ETIKET = [[/seçimin model değeri|Kötü değerli/, 'kötü seçim'], [/ortalama (model )?değer/i, 'değer düşük'],
-  [/Lig yoğunluğu/, 'tek lig'], [/kuponda olabilir/, 'aynı maç çok kuponda'], [/Diğer kuponlarla ortak/, 'ortak maç'], [/çelişiyor/, 'iki model çelişiyor']];
+const RISK_ETIKET = [[/seçimin model değeri|Kötü değerli|Oranı düşük seçim/, 'kötü seçim'], [/ortalama (model )?değer|Oranlar genel olarak düşük/i, 'değer düşük'],
+  [/Lig yoğunluğu|Tek lige yığılma/, 'tek lig'], [/kuponda olabilir/, 'aynı maç çok kuponda'], [/Diğer kuponlarla ortak|Başka kuponlarda da var/, 'ortak maç'], [/çelişiyor|Şüpheli seçim/, 'iki model çelişiyor']];
 const riskEtiketleri = (mesajlar) => [...new Set(mesajlar.flatMap(m => RISK_ETIKET.filter(([re]) => re.test(m)).map(([, e]) => e)))];
 /** Günün maçlarını içeren en son çekim */
 const hedefBulten = (tarih) => gunBulteni(hedefTarih(tarih));
@@ -275,7 +275,7 @@ export function buildHandlers(ctx = {}) {
         ajan: z.enum(KUPON_AJAN_ENUM).describe('Senin kimliğin'),
         secimler: z.array(z.object({
           mac_kodu: z.string(), bahis: z.string().describe('Tam bahis adı, örn. "Maç Sonucu"'),
-          secim: z.string().describe('örn. "1", "0", "2", "Üst", "Var", "1 ve 0"'), gerekce: z.string().describe('Kısa gerekçe'),
+          secim: z.string().describe('örn. "1", "0", "2", "Üst", "Var", "1 ve 0"'), gerekce: z.string().describe('Kısa gerekçe, sade Türkçe (teknik terim ve maç kodu yok)'),
         })).min(1),
         risk: z.string().describe('düşük / orta / yüksek / çok yüksek'),
         aciklama: z.string().describe('Kuponun 1-2 cümlelik özeti, kendi konuşma tarzınla'),
@@ -363,11 +363,11 @@ export function buildHandlers(ctx = {}) {
       desc: 'Çok Bilen Kardeş içindir: bir kupona önce lehte/aleyhte tartışmayı (lehte: kuponun en güçlü savunması, aleyhte: ona cevap ve en büyük risk), sonra 1-10 puan, değiştirilmesi gereken maç kodları ve eleştiri yazar.',
       shape: {
         kupon_id: z.number().int(),
-        lehte: z.string().describe('Kuponun lehine EN GÜÇLÜ argüman, 1-2 cümle, veriye dayalı (savunma avukatı gibi)'),
-        aleyhte: z.string().describe('Lehteki argümana cevap ve kuponu yakabilecek en büyük risk, 1-2 cümle'),
+        lehte: z.string().describe('Kuponun lehine EN GÜÇLÜ argüman, 1-2 cümle, veriye dayalı ama sade Türkçe (savunma avukatı gibi)'),
+        aleyhte: z.string().describe('Lehteki argümana cevap ve kuponu yakabilecek en büyük risk, 1-2 cümle, sade Türkçe'),
         puan: z.number().int().min(1).max(10),
         degistirilmeli: z.array(z.string()).describe('Zayıf halka maç kodları (boş olabilir)'),
-        elestiri: z.string().describe('2-4 cümle, veriye dayalı; tartışmanın hükmü'),
+        elestiri: z.string().describe('2-4 cümle, veriye dayalı ama sade Türkçe (λ, değer %, korelasyon, kod yok); tartışmanın hükmü'),
       },
       run: async ({ kupon_id, lehte, aleyhte, puan, degistirilmeli, elestiri }) => {
         const k = getCoupon(kupon_id);

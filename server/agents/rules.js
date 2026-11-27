@@ -124,22 +124,23 @@ export function riskKurulu(detay, { gun, settings, haricId = null }) {
   // 1) Kötü değerli seçimler (iki yarı tahminli "yaklaşık" bahisler sayılmaz)
   const kotu = detay.filter(d => d.deger != null && !d.yaklasik && d.deger < r.kotuDeger);
   const kotuYazi = kotu.map(d => `${d.mac_kodu} ${d.bahis}: ${d.secim} (${degerYazi(d.deger)})`).join(', ');
+  const sade = (d) => `${d.mac_adi ?? d.mac_kodu} – ${d.bahis}: ${d.secim}`;
   if (kotu.length > r.maxKotuSecim) hatalar.push(`Nikah Dairesi (risk kurulu): ${kotu.length} seçimin model değeri ${yz(r.kotuDeger)}'nin altında (en fazla ${r.maxKotuSecim}): ${kotuYazi}. Bunları değiştir.`);
-  else if (kotu.length) uyarilar.push(`Kötü değerli seçim: ${kotuYazi}`);
+  else if (kotu.length) uyarilar.push(`Oranı düşük seçim: ${kotu.map(sade).join(', ')}. Oran, maçın gerçek ihtimaline göre olması gerekenden belirgin düşük.`);
 
   // 2) Seçim başına ortalama değer (geometrik): kupon genelinde marjın üstünde kayıp var mı?
   const degerli = detay.filter(d => d.deger != null && !d.yaklasik);
   if (degerli.length) {
     const ort = Math.pow(degerli.reduce((x, d) => x * (1 + d.deger), 1), 1 / degerli.length) - 1;
     if (ort < r.retOrtalamaDeger) hatalar.push(`Nikah Dairesi (risk kurulu): seçim başına ortalama model değeri ${degerYazi(ort)}; sınır ${yz(r.retOrtalamaDeger)}. Bültenin olağan marjından kötü seçimler var, daha değerli seçimlere geç (deger_listesi).`);
-    else if (ort < r.uyariOrtalamaDeger) uyarilar.push(`Seçim başına ortalama değer ${degerYazi(ort)} (olağan marjın altında)`);
+    else if (ort < r.uyariOrtalamaDeger) uyarilar.push('Oranlar genel olarak düşük: bu kuponun oranları, maçların ihtimaline göre bültendeki ortalamadan daha az veriyor.');
   }
 
   // 3) Lig yoğunluğu: tek ligin sürprizi kuponu toptan yakar
   if (detay.length >= 3) {
     const sayac = {};
     for (const d of detay) sayac[d.lig] = (sayac[d.lig] ?? 0) + 1;
-    for (const [lig, n] of Object.entries(sayac)) if (n / detay.length > r.ligYogunluk) uyarilar.push(`Lig yoğunluğu: ${detay.length} maçın ${n}'i ${lig}`);
+    for (const [lig, n] of Object.entries(sayac)) if (n / detay.length > r.ligYogunluk) uyarilar.push(`Tek lige yığılma: ${detay.length} maçın ${n} tanesi ${lig}. O ligde sürprizli bir gün olursa kupon toptan yanar.`);
   }
 
   // 4b) İki model çelişkisi: oran modeli seçimi destekliyor ama bağımsız güç modeli (ESPN) belirgin şekilde daha düşük veriyor
@@ -150,7 +151,7 @@ export function riskKurulu(detay, { gun, settings, haricId = null }) {
       if (fark <= r.celiskiUyari) continue;
       const yazi = `${d.mac_kodu} ${d.bahis}: ${d.secim} → oran modeli ${yz(d.model_olasilik)}, bağımsız model ${yz(d.bagimsiz_olasilik)}`;
       if (r.celiskiRet != null && fark > r.celiskiRet) hatalar.push(`Nikah Dairesi (risk kurulu): iki model çelişiyor (${yazi}). Sahadaki güç bu seçimi desteklemiyor; başka maç seç.`);
-      else uyarilar.push(`İki model çelişiyor: ${yazi}`);
+      else uyarilar.push(`Şüpheli seçim: ${sade(d)}. iddaa oranına göre ihtimal ${yz(d.model_olasilik)}, takımların sezon istatistiklerine göre ise ${yz(d.bagimsiz_olasilik)}; istatistik bu seçimi o kadar desteklemiyor.`);
     }
   }
 
@@ -162,7 +163,7 @@ export function riskKurulu(detay, { gun, settings, haricId = null }) {
     if (!rows.length) continue;
     const yazi = `${d.mac_kodu} ${d.bahis}: ${d.secim} → ${rows.map(x => `#${x.kupon_id}`).join(', ')}`;
     if (rows.length + 1 > r.maxAyniMac) hatalar.push(`Nikah Dairesi (risk kurulu): ${yazi} kuponlarında da var; aynı seçim bugün en fazla ${r.maxAyniMac} kuponda olabilir. Başka maç seç.`);
-    else uyarilar.push(`Diğer kuponlarla ortak: ${yazi}`);
+    else uyarilar.push(`Başka kuponlarda da var: ${sade(d)} → ${rows.map(x => `#${x.kupon_id}`).join(', ')}. Bu maç yatarsa o kuponlar da birlikte yanar.`);
   }
   return { hatalar, uyarilar };
 }

@@ -24,7 +24,7 @@ test('olağan marjdaki kupon temiz geçer', () => {
 test('tek kötü seçim uyarı, iki kötü seçim ret', () => {
   const bir = riskKurulu([sec(-0.25), sec(-0.10), sec(-0.10)], { gun: GUN, settings: S });
   assert.equal(bir.hatalar.length, 0);
-  assert.match(bir.uyarilar.join(), /Kötü değerli seçim/);
+  assert.match(bir.uyarilar.join(), /Oranı düşük seçim/);
   const iki = riskKurulu([sec(-0.25), sec(-0.22), sec(-0.05)], { gun: GUN, settings: S });
   assert.match(iki.hatalar.join(), /2 seçimin model değeri/);
 });
@@ -37,7 +37,7 @@ test('yaklaşık (iki yarı) bahisler kötü seçim sayılmaz', () => {
 test('ortalama değer: −%16 uyarı, −%19 ret', () => {
   const uyari = riskKurulu([sec(-0.16), sec(-0.16), sec(-0.16)], { gun: GUN, settings: S });
   assert.equal(uyari.hatalar.length, 0);
-  assert.match(uyari.uyarilar.join(), /ortalama değer/);
+  assert.match(uyari.uyarilar.join(), /Oranlar genel olarak düşük/);
   const ret = riskKurulu([sec(-0.19), sec(-0.19), sec(-0.19)], { gun: GUN, settings: S });
   assert.match(ret.hatalar.join(), /ortalama model değeri/);
 });
@@ -46,7 +46,7 @@ test('tek lige yığılma uyarısı', () => {
   const sl = { lig: 'Süper Lig' };
   assert.deepEqual(riskKurulu([sec(-0.13, sl), sec(-0.13, sl), sec(-0.13)], { gun: GUN, settings: S }).uyarilar, []);
   const r = riskKurulu([sec(-0.13, sl), sec(-0.13, sl), sec(-0.13, sl), sec(-0.13, sl)], { gun: GUN, settings: S });
-  assert.match(r.uyarilar.join(), /Lig yoğunluğu: 4 maçın 4'i Süper Lig/);
+  assert.match(r.uyarilar.join(), /Tek lige yığılma: 4 maçın 4 tanesi Süper Lig/);
 });
 
 test('aynı seçim diğer kuponlarda: uyarı, sınır aşılırsa ret; pasif kurul hiçbir şey demez', () => {
@@ -56,7 +56,7 @@ test('aynı seçim diğer kuponlarda: uyarı, sınır aşılırsa ret; pasif kur
   };
   ekle(1);
   const ortak = sec(-0.12, { mac_kodu: '999' });
-  assert.match(riskKurulu([ortak, sec(-0.12)], { gun: GUN, settings: S }).uyarilar.join(), /Diğer kuponlarla ortak: 999 .* #1/);
+  assert.match(riskKurulu([ortak, sec(-0.12)], { gun: GUN, settings: S }).uyarilar.join(), /Başka kuponlarda da var: .* → #1/);
   ekle(2); ekle(3);
   assert.match(riskKurulu([ortak, sec(-0.12)], { gun: GUN, settings: S }).hatalar.join(), /en fazla 3 kuponda/);
   // revize edilen kupon sayılmaz

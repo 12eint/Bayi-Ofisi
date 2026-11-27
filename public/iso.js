@@ -182,8 +182,6 @@ export function createIsoOffice(root) {
     px(kx - 2, ky - 3, 1, 3, '#a85f18'); px(kx + 1, ky - 3, 1, 3, '#a85f18');
     px(kx + 4, ky - 2 - (Math.floor(t / 1200) % 2), 2, 1, '#d9822b');
     // tabela zeminleri (yazılar okunaklı olsun diye HTML katmanında, duvar açısıyla eğik çizilir)
-    fillPoly([P(0, 2.4, 62), P(0, 7.9, 62), P(0, 7.9, 72), P(0, 2.4, 72)], '#1e4d2b');
-    fillPoly([P(0, 2.45, 62.6), P(0, 7.85, 62.6), P(0, 7.85, 63.2), P(0, 2.45, 63.2)], '#c9a24a');
     fillPoly([P(0, 1.0, 34), P(0, 2.5, 34), P(0, 2.5, 52), P(0, 1.0, 52)], '#1c1c1c');
     fillPoly([P(0, 1.05, 34.6), P(0, 2.45, 34.6), P(0, 2.45, 35.2), P(0, 1.05, 35.2)], '#6b4529');
   }
@@ -536,8 +534,7 @@ export function createIsoOffice(root) {
   const EGIM = Math.atan(TH / TW) * 180 / Math.PI;   // 26.57°
   // duvar: 'sag' (y=0 düzlemi, sağa doğru iner) | 'sol' (x sabit düzlem, sağa doğru yükselir)
   const LEVHALAR = [
-    { id: 'kiraathane', duvar: 'sol', x: 0, y0: 2.4, y1: 7.9, z0: 63, z1: 72, html: 'KIRAATHANE', font: 6.2 },
-    { id: 'neon', duvar: 'sol', x: 0, y0: 3.7, y1: 6.5, z0: 42, z1: 55, html: 'BAYİ', font: 9.5 },
+    { id: 'neon', duvar: 'sol', x: 0, y0: 3.55, y1: 6.65, z0: 42, z1: 55, html: 'KAZAN dairesi', font: 5.4 },
     { id: 'cay', duvar: 'sol', x: 0, y0: 1.0, y1: 2.5, z0: 35, z1: 52, html: '<span>ÇAY</span><b>10₺</b>', font: 5.2 },
     { id: 'tv0', duvar: 'sag', y: 0, x0: 3.05, x1: 5.05, z0: 37, z1: 57, html: '', font: 3.6, tv: 0 },
     { id: 'tv1', duvar: 'sag', y: 0, x0: 6.05, x1: 8.05, z0: 37, z1: 57, html: '', font: 3.6, tv: 1 },

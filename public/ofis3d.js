@@ -142,16 +142,15 @@ export function createOfis3D(root) {
   kutu(kedi, 0.16, 0.12, 0.38, '#d9822b', 0, 0, 0); kutu(kedi, 0.15, 0.13, 0.14, '#d9822b', 0, 0.02, -0.24);
   kutu(kedi, 0.04, 0.05, 0.03, '#d9822b', -0.04, 0.15, -0.26); kutu(kedi, 0.04, 0.05, 0.03, '#d9822b', 0.04, 0.15, -0.26);
   const kuyruk = kutu(kedi, 0.05, 0.04, 0.22, '#d9822b', 0.03, 0, 0.27);
-  const neon = yazıDokusu(512, 160, (g, w, h) => {
-    g.fillStyle = '#10141c'; g.fillRect(0, 0, w, h); g.shadowColor = '#ffcc00'; g.shadowBlur = 24;
-    g.font = 'bold 118px "Arial Black", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ffd84d'; g.fillText('BAYİ', w / 2, h / 2 + 6);
+  // Pencere üstündeki neon tabela: "KAZAN dairesi" (yazı, levhaya sığacak boyuta kendiliğinden küçülür)
+  const NEON_YAZI = 'KAZAN dairesi';
+  const neon = yazıDokusu(1024, 292, (g, w, h) => {
+    g.fillStyle = '#10141c'; g.fillRect(0, 0, w, h); g.shadowColor = '#ffcc00'; g.shadowBlur = 28;
+    let boy = 150; g.font = `bold ${boy}px "Arial Black", sans-serif`;
+    while (g.measureText(NEON_YAZI).width > w * 0.9 && boy > 40) { boy -= 4; g.font = `bold ${boy}px "Arial Black", sans-serif`; }
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ffd84d'; g.fillText(NEON_YAZI, w / 2, h / 2 + 6);
   });
-  const neonLevha = levha('sol', 3.7, 6.5, 2.05, 2.85, neon.tex, { parlak: true }); neonLevha.position.x = 0.12;
-  const tabela = yazıDokusu(1024, 128, (g, w, h) => {
-    g.fillStyle = '#1e4d2b'; g.fillRect(0, 0, w, h); g.fillStyle = '#c9a24a'; g.fillRect(0, 8, w, 6); g.fillRect(0, h - 14, w, 6);
-    g.font = 'bold 76px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#f3e9d8'; g.fillText('KIRAATHANE', w / 2, h / 2 + 4);
-  });
-  levha('sol', 2.4, 7.9, 3.05, 3.55, tabela.tex);
+  const neonLevha = levha('sol', 3.6, 6.6, 2.05, 2.85, neon.tex, { parlak: true }); neonLevha.position.x = 0.12;
   const çayTahta = yazıDokusu(256, 320, (g, w, h) => {
     g.fillStyle = '#1c1c1c'; g.fillRect(0, 0, w, h); g.strokeStyle = '#6b4529'; g.lineWidth = 14; g.strokeRect(0, 0, w, h);
     g.textAlign = 'center'; g.fillStyle = '#f3e9d8'; g.font = 'bold 86px "Courier New", monospace'; g.fillText('ÇAY', w / 2, 130);

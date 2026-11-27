@@ -189,7 +189,7 @@ button { font: inherit; cursor: pointer; }
   font-family: var(--mono); font-weight: 900; line-height: 1; white-space: nowrap; overflow: hidden; pointer-events: none;
 }
 .iso-levha-kiraathane { color: #f4e3b0; letter-spacing: .12em; text-shadow: 0 1px 0 #0f2a17; }
-.iso-levha-neon { color: #ffcc00; letter-spacing: .1em; text-shadow: 0 0 .15em #ffcc00, 0 0 .5em rgba(255,204,0,.7), 0 0 1em rgba(255,150,0,.5); animation: neonTitre 7s steps(1) infinite; }
+.iso-levha-neon { color: #ffcc00; letter-spacing: .03em; white-space: nowrap; text-shadow: 0 0 .15em #ffcc00, 0 0 .5em rgba(255,204,0,.7), 0 0 1em rgba(255,150,0,.5); animation: neonTitre 7s steps(1) infinite; }
 @keyframes neonTitre { 0%, 96%, 98%, 100% { opacity: 1; } 97%, 99% { opacity: .35; } }
 .iso-levha-cay { flex-direction: column; gap: .15em; color: #f4efe0; }
 .iso-levha-cay b { color: #ffcc00; font-size: 1.15em; }

@@ -89,7 +89,7 @@ function macOzeti(e, takimId) {
   if (!ben || !o) return null;
   const sk = (t) => Number(t.score?.value ?? t.score?.displayValue ?? t.score);
   const a = sk(ben), y = sk(o);
-  return { tarih: e.date?.slice(0, 10), rakip: o.team.displayName, ic: ben.homeAway === 'home', a, y, s: a > y ? 'G' : a < y ? 'M' : 'B' };
+  return { id: e.id, tarih: e.date?.slice(0, 10), rakip: o.team.displayName, ic: ben.homeAway === 'home', a, y, s: a > y ? 'G' : a < y ? 'M' : 'B' };
 }
 export async function takimFormu(slug, takimAdi, { n = 6, fetchFn } = {}) {
   const tablo = await puanDurumu(slug, fetchFn);

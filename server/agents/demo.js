@@ -19,6 +19,8 @@ const PROFIL = {
     sozler: ['Abicim bi düşünsene yaaa, bu tutarsa anneme bulaşık makinesi alıcam.', 'İçimde bi his var, inşallah bu sefer... Hayal etmesi bedava abicim.'] },
   'inatci-eniste': { bahisler: ['1. Yarı ve 2. Yarıda Karşılıklı Gol Olur'], secimler: ['Evet / Evet'], min: 10, max: 60, risk: 'çok yüksek',
     sozler: ['Siz gülün bakalım... İki yarı, iki gol, iki takım. Ben bu bahisten dönmem.', 'Geçen sefer bir golle kaçtı, olsun. Bende sabır çok.'] },
+  'alt-ustcu': { bahisler: ['Alt/Üst 1.5', 'Alt/Üst 2.5', 'Alt/Üst 3.5'], min: 1.3, max: 2.3, risk: 'orta',
+    sozler: ['Rakamlar yalan söylemez: şut var, gol var.', 'Ceza sahasına giremeyen gol atamaz; çizgiyi düzelttim.'] },
   'hizli-genc': { bahisler: ['Maç Sonucu', 'Karşılıklı Gol', 'Alt/Üst 2.5', 'Alt/Üst 3.5'], min: 1.9, max: 4.2, risk: 'çok yüksek',
     sozler: ['Aga bak yazıyorum buraya, kasa dönüyo! Gelirse mahalleye kahve benden.', 'Kanka sürpriz yoksa heyecan da yok, yatarsa yatsın reis!'] },
 };

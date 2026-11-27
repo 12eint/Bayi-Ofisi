@@ -3,7 +3,7 @@ import { query, tool, createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk'
 import { db, nowIso } from '../db.js';
 import { getSettings } from '../settings.js';
 import { emit } from '../events.js';
-import { AGENTS, gmSystemPrompt, TOOL_PREFIX } from './definitions.js';
+import { AGENTS, gmSystemPrompt, TOOL_PREFIX, ajanPrompt, ajanModeli } from './definitions.js';
 import { buildHandlers } from './handlers.js';
 import { runDemoOffice } from './demo.js';
 
@@ -60,7 +60,7 @@ export async function runOffice(talimat, { onLog } = {}) {
     // Aynı gün içindeki son başarılı SDK oturumundan devam et (sohbet bağlamı korunur)
     const prev = db.prepare("SELECT sdk_session_id FROM oturumlar WHERE sdk_session_id IS NOT NULL AND durum = 'bitti' AND date(baslangic) = date('now') ORDER BY id DESC LIMIT 1").get();
     const agents = Object.fromEntries(Object.entries(AGENTS).map(([k, a]) => [k, {
-      description: a.description, prompt: a.prompt, tools: a.tools, model: 'inherit', maxTurns: 40,
+      description: a.description, prompt: ajanPrompt(k, settings), tools: a.tools, model: ajanModeli(k, settings), maxTurns: 40,
     }]));
 
     const taskAgent = new Map(); // tool_use_id / task_id -> ajan adı

@@ -5,29 +5,33 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const MASA = 1.4, MASA_Y = 0.75;
+// Düzen: arka sıra Öz23 · Hızlı Genç · 07 Mal Ahmet | orta sıra Box23 · Dorasal · Hakan Revio | ön sıra Spor Totocu (ortada)
 const KADRO = {
   'genel-mudur':      { yer: [9.45, 4.2], ayakta: true, yon: Math.PI / 4, renk: '#1f1f24', kol: '#2a2a30' },
-  'yasli-dayi':       { masa: [3.2, 2.0], renk: '#3e5a3a', kol: '#4a6a45' },
-  'hizli-genc':       { masa: [6.2, 2.0], renk: '#c62828', kol: '#d23a3a' },
-  'beyaz-hayalci':    { masa: [2.0, 4.6], renk: '#9fb8e8', kol: '#b3c8ef' },
-  'cok-bilen-kardes': { masa: [4.8, 4.6], renk: '#6b4a1f', kol: '#7d5827' },
-  'inatci-eniste':    { masa: [3.2, 6.5], renk: '#7b3fa0', kol: '#8a4bb0' },
-  'spor-totocu':      { masa: [5.9, 6.2], renk: '#1b6e8f', kol: '#2580a3' },   // eski tavla masası
+  'yasli-dayi':       { masa: [1.2, 1.8], renk: '#4a6a45', kol: '#587a52' },
+  'hizli-genc':       { masa: [3.7, 1.8], renk: '#b84a3e', kol: '#c45a4d' },
+  'beyaz-hayalci':    { masa: [6.2, 1.8], renk: '#8fa8cf', kol: '#a2b8da' },
+  'inatci-eniste':    { masa: [1.2, 4.2], renk: '#7a5a8e', kol: '#8a6a9e' },
+  'alt-ustcu':        { masa: [3.7, 4.2], renk: '#4f7f5a', kol: '#5e8f69' },
+  'cok-bilen-kardes': { masa: [6.2, 4.2], renk: '#7a5a34', kol: '#8a6a42' },
+  'spor-totocu':      { masa: [3.7, 6.3], renk: '#3f7590', kol: '#4d86a2' },
 };
 const yerOf = (k) => { const d = KADRO[k]; return d.ayakta ? d.yer : [d.masa[0] + 0.75, d.masa[1] - 0.15]; };
-const TAVLA = [5.9, 6.2];
 const KASA = { x: 8.2, z: 3.1, w: 1.0, d: 2.6, h: 0.8 };
-const ÇAYCI_YOL = [[1.7, 1.45], [5.45, 1.45], [5.45, 3.95], [6.9, 3.95], [6.9, 5.9], [6.9, 3.95], [1.6, 3.95], [1.6, 1.45]];
-const DURAK = new Set([1, 4, 6]);
-const GIZMO_HUB = [7.75, 3.95];
+// Çaycının yolu: masaların arasındaki düz koridorlar (çay ocağından başlar)
+const ÇAYCI_YOL = [[0.6, 1.2], [5.65, 1.2], [5.65, 3.5], [7.9, 3.5], [7.9, 5.75], [3.15, 5.75], [3.15, 3.5], [0.6, 3.5]];
+const DURAK = new Set([1, 3, 5]);   // bu noktalarda çay bırakmak için durur
+// Gizmo: koridor merkezinden (HUB) her kişiye gider; son nokta duruş yeri, "bak" konuştuğu kişi
+const GIZMO_HUB = [7.9, 3.5];
 const GIZMO_DURAKLAR = [
-  { kime: 'genel-mudur',      yol: [[7.75, 4.3]],                           bak: [9.45, 4.2] },
-  { kime: 'hizli-genc',       yol: [[5.45, 3.95], [5.45, 1.5], [6.15, 1.5]], bak: [6.95, 1.85] },
-  { kime: 'yasli-dayi',       yol: [[5.45, 3.95], [5.45, 1.5], [4.75, 1.5]], bak: [3.95, 1.85] },
-  { kime: 'beyaz-hayalci',    yol: [[3.3, 3.95]],                           bak: [2.75, 4.45] },
-  { kime: 'cok-bilen-kardes', yol: [[6.1, 3.95]],                           bak: [5.55, 4.45] },
-  { kime: 'inatci-eniste',    yol: [[4.4, 3.95], [4.4, 6.25], [4.85, 6.45]], bak: [3.95, 6.35] },
-  { kime: 'spor-totocu',      yol: [[7.75, 6.5]],                           bak: [6.65, 6.05] },
+  { kime: 'genel-mudur',      yol: [[7.9, 4.3]],                                bak: [9.45, 4.2] },
+  { kime: 'cok-bilen-kardes', yol: [[7.9, 3.95]],                               bak: [6.95, 4.05] },
+  { kime: 'beyaz-hayalci',    yol: [[7.9, 1.9]],                                bak: [6.95, 1.65] },
+  { kime: 'hizli-genc',       yol: [[5.65, 3.5], [5.65, 1.8]],                  bak: [4.45, 1.65] },
+  { kime: 'yasli-dayi',       yol: [[5.65, 3.5], [3.15, 3.5], [3.15, 1.8]],     bak: [1.95, 1.65] },
+  { kime: 'inatci-eniste',    yol: [[5.65, 3.5], [3.15, 3.5], [3.15, 4.1]],     bak: [1.95, 4.05] },
+  { kime: 'alt-ustcu',        yol: [[5.65, 3.5], [5.65, 4.1]],                  bak: [4.45, 4.05] },
+  { kime: 'spor-totocu',      yol: [[7.9, 5.75], [5.65, 5.75], [5.65, 6.2]],    bak: [4.45, 6.15] },
 ];
 const GIZMO_LAFLAR = ['Bonjour!', 'Tutarsa küsüratı benim!', 'Başar hocam!', 'Bu 50 lirayı kaç para yapabiliriz?', 'Bugün tıraş yine yok.'];
 const RISK_MASA = [8.3, 0.7];
@@ -103,8 +107,8 @@ export function createOfis3D(root) {
 
   // ---------- oda ----------
   const zeminDoku = yazıDokusu(64, 64, (g) => {
-    g.fillStyle = '#e8dcc0'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#b5523b'; g.fillRect(0, 0, 32, 32); g.fillRect(32, 32, 32, 32);
-    g.strokeStyle = '#8f3f2d'; g.lineWidth = 2; g.strokeRect(0, 0, 64, 64);
+    g.fillStyle = '#d6c6a2'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#c4ae86'; g.fillRect(0, 0, 32, 32); g.fillRect(32, 32, 32, 32);
+    g.strokeStyle = '#ab9370'; g.lineWidth = 2; g.strokeRect(0, 0, 64, 64);
   });
   zeminDoku.tex.wrapS = zeminDoku.tex.wrapT = THREE.RepeatWrapping; zeminDoku.tex.repeat.set(10, 8); zeminDoku.tex.magFilter = THREE.NearestFilter;
   const zemin = new THREE.Mesh(new THREE.PlaneGeometry(10, 8), new THREE.MeshLambertMaterial({ map: zeminDoku.tex }));
@@ -277,6 +281,10 @@ export function createOfis3D(root) {
         s(0.11, 0.08, 0.02, '#111', -0.075, 0.15, 0.165); s(0.11, 0.08, 0.02, '#111', 0.075, 0.15, 0.165); s(0.04, 0.02, 0.02, '#111', 0, 0.17, 0.165);
         s(0.07, 0.04, 0.01, '#bfe3ff', -0.075, 0.17, 0.176); s(0.07, 0.04, 0.01, '#bfe3ff', 0.075, 0.17, 0.176);
         kutu(p.g, 0.12, 0.6, 0.01, '#efe6d0', 0, p.kalça, 0.136, false); kutu(p.g, 0.04, 0.12, 0.01, '#c62828', -0.06, p.kalça + 0.4, 0.14, false); break;
+      case 'alt-ustcu':
+        s(0.34, 0.08, 0.33, '#5a3a22', 0, 0.32, -0.01); s(0.3, 0.1, 0.05, '#5a3a22', 0, 0.02, 0.15);
+        kutu(p.g, 0.05, 0.08, 0.04, '#c0c4c9', 0, p.kalça + 0.3, 0.15, false);
+        break;
       case 'spor-totocu':
         s(0.34, 0.06, 0.33, '#b9b9b9', 0, 0.32, -0.01); s(0.03, 0.12, 0.22, '#b9b9b9', -0.17, 0.16, -0.03); s(0.03, 0.12, 0.22, '#b9b9b9', 0.17, 0.16, -0.03);
         s(0.11, 0.06, 0.02, '#3a3a3a', -0.075, 0.15, 0.165); s(0.11, 0.06, 0.02, '#3a3a3a', 0.075, 0.15, 0.165); s(0.15, 0.03, 0.02, '#8a8a8a', 0, 0.09, 0.16);

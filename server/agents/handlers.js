@@ -11,6 +11,8 @@ import { tutmaKarnesiYazi } from '../stats.js';
 import { tabanPuan, tabanYazi, revioKarnesi, PUAN_ESNEKLIK } from './puan.js';
 import { totoProgrami, totoAnaliz, totoAnalizYazi, totoDogrula, totoKaydet, totoKuponlari, totoKuponYazi } from '../toto.js';
 import { bagimsizModel, bagimsizYazi, bagimsizHarita } from '../veri/bagimsiz.js';
+import { altUstModeli, altUstYazi } from '../veri/istatistik.js';
+import { adayPaketi, adayYazi } from './aday.js';
 import { validateCoupon, saveCoupon, listCoupons, couponText, getCoupon, dailyTotal } from './rules.js';
 import { AGENTS, KUPON_AJANLARI } from './definitions.js';
 import { macModeliGetir, secimModeli, lambdaYazi, yuzde, degerYazi } from '../model/index.js';
@@ -142,10 +144,10 @@ export function buildHandlers(ctx = {}) {
     },
 
     mac_detay: {
-      desc: 'Bir maçın bültendeki TÜM bahis türlerini ve oranlarını (MBS ile) verir.',
-      shape: { mac_kodu: z.string(), tarih: TARIH },
+      desc: 'Bir maçın bültendeki bahislerini ve oranlarını (MBS, model olasılığı ve değerle) verir. bahis verirsen yalnızca adında o metin geçen bahisler (ör. "Alt/Üst", "Maç Sonucu"). Token tasarrufu açıkken filtresiz çağrı yalnızca temel bahisleri gösterir; hepsi için tum_bahisler: true.',
+      shape: { mac_kodu: z.string(), tarih: TARIH, bahis: z.string().optional().describe('Adında geçen metin, ör. "Alt/Üst"'), tum_bahisler: z.boolean().optional() },
       readOnly: true,
-      run: async ({ mac_kodu, tarih }) => {
+      run: async ({ mac_kodu, tarih, bahis, tum_bahisler }) => {
         const gun = hedefTarih(tarih);
         const b = gunBulteni(gun);
         if (!b) return text(`${gun} için bültende maç yok.`, true);
@@ -155,7 +157,12 @@ export function buildHandlers(ctx = {}) {
           return text(`${mac_kodu} ${gun} bülteninde yok.${baska ? ` Bu kod ${baska.gun} gününde var; o güne kupon yapılıyorsa tarih "${baska.gun}" ver.` : ''}`, true);
         }
         const grp = {};
-        for (const o of m.oranlar) {
+        // Filtre: bahis metni; yoksa ve token tasarrufu açıksa yalnızca temel bahisler (MS, ÇŞ, Alt/Üst, KG, İY, handikap)
+        const norm = (x) => x.toLocaleLowerCase('tr-TR');
+        const kisa = !bahis && !tum_bahisler && getSettings().tokenTasarrufu?.aktif;
+        const oranlar = m.oranlar.filter(o => bahis ? norm(o.bahis).includes(norm(bahis)) : !kisa || POPULER.some(re => re.test(o.bahis)) || /^1\. Yarı (Sonucu|Alt\/Üst)/.test(o.bahis));
+        const gizli = new Set(m.oranlar.map(o => o.bahis)).size - new Set(oranlar.map(o => o.bahis)).size;
+        for (const o of oranlar) {
           const md = secimModeli(m.id, o.bahis, o.secim, o.oran);
           (grp[o.bahis] ??= []).push(`${o.secim}:${o.oran}${o.mbs > 1 ? `(MBS${o.mbs})` : ''}${md.model != null ? ` [${yuzde(md.model)} ${degerYazi(md.deger)}${md.yaklasik ? ' ~' : ''}]` : ''}`);
         }
@@ -163,7 +170,36 @@ export function buildHandlers(ctx = {}) {
         const ozet = model ? `Model: λ ev ${model.lh} / dep ${model.la}, beraberlik düzeltmesi ${model.delta}, ilk yarı gol payı ${model.ilkYariPayi}. [olasılık değer] = model tutma olasılığı ve olasılık×oran−1; "~" = iki yarıya bağlı bahis, model burada yaklaşık.` : 'Model kurulamadı (MS oranı eksik).';
         let bag = '';
         try { const bm = await bagimsizModel(m); bag = bm ? `\n${bagimsizYazi(bm)}` : (espnLig(m.lig) ? '\nBağımsız model: takımlar ESPN puan durumunda eşleşmedi.' : ''); } catch { /* ESPN'e ulaşılamadı */ }
-        return text(`${m.mac_kodu} | ${m.saat} | ${m.lig} | ${m.ev} - ${m.deplasman}\n${ozet}${bag}\n` + Object.entries(grp).map(([k, v]) => `${k}: ${v.join('  ')}`).join('\n'));
+        return text(`${m.mac_kodu} | ${m.saat} | ${m.lig} | ${m.ev} - ${m.deplasman}\n${ozet}${bag}\n` + Object.entries(grp).map(([k, v]) => `${k}: ${v.join('  ')}`).join('\n') +
+          (gizli > 0 ? `\n(+${gizli} bahis türü daha var; görmek için bahis filtresi ya da tum_bahisler: true)` : ''));
+      },
+    },
+
+    aday_paketi: {
+      desc: 'Kupon ajanları içindir (token tasarrufu): senin kurallarına (seçim başına oran aralığı, bahis türü, verili lig, Nikah Dairesi çelişki kuralı) uyan en iyi adayları değere göre sıralı, oran modeli ve bağımsız modelle birlikte tek tabloda verir. İşe bununla başla.',
+      shape: { ajan: z.enum(KUPON_AJAN_ENUM).describe('Senin kimliğin'), tarih: TARIH, adet: z.number().int().min(5).max(30).optional().describe('Varsayılan ayardaki aday sayısı (15)') },
+      readOnly: true,
+      run: async ({ ajan, tarih, adet }) => text(adayYazi(ajan, await adayPaketi(ajan, hedefTarih(tarih), { adet }))),
+    },
+
+    alt_ust_analiz: {
+      desc: 'Dorasal (Alt-Üstçü) içindir: bir maçın iki takımının son 5 maçındaki gol atma/yeme, şut, isabetli şut, ceza sahası içi şut (ve rakibe izin verdikleri), korner, topa sahip olma ortalamaları; bunlardan iddaa oranı kullanmadan hesaplanan gol beklentisi ve Üst/Alt olasılıkları; bültendeki tüm Alt/Üst oranları ve oran modeli değerleri. Kaynak ESPN.',
+      shape: { mac_kodu: z.string(), tarih: TARIH },
+      readOnly: true,
+      run: async ({ mac_kodu, tarih }) => {
+        const gun = hedefTarih(tarih);
+        const b = gunBulteni(gun);
+        const m = b ? listMatches(b.id, { gun, kodlar: [mac_kodu] })[0] : null;
+        if (!m) return text(`${mac_kodu} ${gun} bülteninde yok.`, true);
+        if (!espnLig(m.lig)) return text(`${m.lig} ligi ESPN kaynağında yok; bu maç için istatistik verisi yok.`, true);
+        let analiz;
+        try { analiz = await altUstModeli(m); } catch (e) { return text(`ESPN verisine ulaşılamadı: ${e.message}`, true); }
+        const desen = new RegExp(AGENTS['alt-ustcu'].bahisDeseni);
+        const oranlar = m.oranlar.filter(o => desen.test(o.bahis)).map(o => {
+          const md = secimModeli(m.id, o.bahis, o.secim, o.oran);
+          return `${o.bahis} ${o.secim}: ${o.oran}${md.model != null ? ` [oran modeli ${yuzde(md.model)} ${degerYazi(md.deger)}]` : ''}`;
+        });
+        return text(`${m.mac_kodu} | ${m.saat} | ${m.lig} | ${m.ev} - ${m.deplasman} [istatistik kaynağı: ESPN, son 5 maç]\n${altUstYazi(analiz)}\nBültendeki Alt/Üst oranları:\n  ${oranlar.join('\n  ') || 'yok'}`);
       },
     },
 

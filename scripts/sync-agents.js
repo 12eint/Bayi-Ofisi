@@ -17,7 +17,7 @@ const write = (rel, content) => {
 };
 const S = getSettings();
 
-for (const name of Object.keys(AGENTS)) write(path.join('.claude', 'agents', `${name}.md`), agentMarkdown(name));
+for (const name of Object.keys(AGENTS)) write(path.join('.claude', 'agents', `${name}.md`), agentMarkdown(name, getSettings()));
 
 write('CLAUDE.md', `# Bayi Ofisi – Genel Müdür
 

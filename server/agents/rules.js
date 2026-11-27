@@ -58,6 +58,8 @@ export function validateCoupon(p, { bulten, gun, settings, oturumId, bagimsiz })
     // Bazı ajanlar yalnızca belirli bahis/seçimleri oynar (ör. İnatçı Enişte: iki yarıda KG → Evet / Evet)
     const izinli = AGENTS[p.ajan]?.bahisler, izinliSecim = AGENTS[p.ajan]?.secimler;
     if (izinli && !izinli.includes(o.bahis)) { hatalar.push(`${s.mac_kodu}: "${o.bahis}" senin bahsin değil; yalnızca şunu oynayabilirsin: ${izinli.join(', ')}${izinliSecim ? ' → ' + izinliSecim.join(', ') : ''}.`); continue; }
+    const desen = AGENTS[p.ajan]?.bahisDeseni;
+    if (desen && !new RegExp(desen).test(o.bahis)) { hatalar.push(`${s.mac_kodu}: "${o.bahis}" senin bahsin değil; ${AGENTS[p.ajan].bahisAciklama ?? 'izin verilen bahisler dışında'}.`); continue; }
     if (izinliSecim && !izinliSecim.includes(o.secim)) { hatalar.push(`${s.mac_kodu}: "${o.secim}" seçimi senin değil; yalnızca ${izinliSecim.join(', ')} oynayabilirsin.`); continue; }
     if (m.gun && m.gun !== gun) hatalar.push(`${s.mac_kodu}: bu maç ${m.gun} gününde; kupon ${gun} günü için. Yalnızca o günün maçlarını seç.`);
     if (m.baslama && new Date(m.baslama).getTime() < Date.now() + 5 * 60000) hatalar.push(`${s.mac_kodu}: maç başlamış ya da başlamak üzere.`);

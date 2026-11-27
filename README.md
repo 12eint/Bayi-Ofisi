@@ -134,6 +134,8 @@ Sonra her seferinde sadece `baslat.cmd` (ya da `npm start`). Sağ üstteki rozet
 | ⚡ | **Hızlı Genç** | Tek hayali zengin olmak; garip bahisler (İY/MS dönüşü, MS+KG, iki yarıda KG...) | oran 300–800, 6–14 maç |
 | ☁️ | **Beyaz Hayalci** | Gözden çıkardığı parayla oynar ama kazanmak zorunda: hedef orana en az maçla, en olası sonuçlarla | oran 20–50, 3–7 maç |
 | 🎯 | **İnatçı Enişte** | Yalnızca "1. Yarı ve 2. Yarıda Karşılıklı Gol Olur: Evet / Evet" (kodla zorunlu; MBS 2 → en az 2 maç) | oran 30–1000, 2–3 maç |
+| 📊 | **Dorasal** (Alt-Üstçü) | Yalnızca Alt/Üst; ESPN'den gol atma/yeme, şut, isabetli şut ve ceza sahası içi şut istatistiğiyle gol beklentisi | oran 2–8, 2–4 maç |
+| 🎟️ | **Spor Totocu** | Haftalık 15 maçlık Spor Toto sistemli kolon önerisi; Ayarlar'daki tutar sınırı ve kolon ücretiyle | tutar sınırı (Ayarlar) |
 | 🧐 | **Çok Bilen Kardeş** | Eleştirmen; 1–10 puan, "değiştirilmeli" işaretler | – |
 
 Tüm aralıklar, tutarlar, kupon sayıları, tek maç oran sınırı, lig filtreleri, MBS kuralı ve günlük bütçe **Ayarlar** sekmesinden değiştirilir.

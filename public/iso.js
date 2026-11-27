@@ -6,7 +6,7 @@ const OX = 144, OY = 84;
 const P = (x, y, z = 0) => [OX + (x - y) * TW, OY + (x + y) * TH - z];
 
 const PAL = {
-  karo1: '#b5523b', karo2: '#e8dcc0', karoDerz: '#8f3f2d',
+  karo1: '#c4ae86', karo2: '#d6c6a2', karoDerz: '#ab9370',
   duvarÜstSol: '#b7a77a', duvarÜstSag: '#c8b88a', lambriSol: '#5a3a22', lambriSag: '#6b4529', lambriÇizgi: '#432a18', süpürgelik: '#2a1a0e',
   masaÜst: '#9a6a3a', masaKenar: '#6e4826', masaKoyu: '#4f321a', ayak: '#3a2414', çuha: '#2f7a46', çuhaKoyu: '#215a33',
   sandalye: '#7a4a24', sandalyeKoyu: '#55321a',
@@ -40,33 +40,33 @@ const FONT = {
 // ---- Yerleşim (tile koordinatı) ----
 // Ajanlar kupon masalarında oturur; Genel Müdür kasanın (tezgâh) başında ayakta durur.
 const MASA = 1.4, MASA_H = 11;
+// Düzen: arka sıra Öz23 · Hızlı Genç · 07 Mal Ahmet | orta sıra Box23 · Dorasal · Hakan Revio | ön sıra Spor Totocu (ortada)
 const KADRO = {
   'genel-mudur':      { yer: [9.45, 4.2], ayakta: true, renk: '#1f1f24', renkKoyu: '#111114', kol: '#2a2a30' },
-  'yasli-dayi':       { masa: [3.2, 2.0], renk: '#3e5a3a', renkKoyu: '#2c4229', kol: '#4a6a45' },
-  'hizli-genc':       { masa: [6.2, 2.0], renk: '#c62828', renkKoyu: '#8e1b1b', kol: '#d23a3a' },
-  'beyaz-hayalci':    { masa: [2.0, 4.6], renk: '#9fb8e8', renkKoyu: '#7690c4', kol: '#b3c8ef' },
-  'cok-bilen-kardes': { masa: [4.8, 4.6], renk: '#6b4a1f', renkKoyu: '#4d3414', kol: '#7d5827' },
-  'inatci-eniste':    { masa: [3.2, 6.5], renk: '#7b3fa0', renkKoyu: '#5c2d78', kol: '#8a4bb0' },
-  'spor-totocu':      { masa: [5.9, 6.2], renk: '#1b6e8f', renkKoyu: '#14526b', kol: '#2580a3' },   // eski tavla masası
+  'yasli-dayi':       { masa: [1.2, 1.8], renk: '#4a6a45', renkKoyu: '#36502f', kol: '#587a52' },
+  'hizli-genc':       { masa: [3.7, 1.8], renk: '#b84a3e', renkKoyu: '#8f382f', kol: '#c45a4d' },
+  'beyaz-hayalci':    { masa: [6.2, 1.8], renk: '#8fa8cf', renkKoyu: '#6e88b0', kol: '#a2b8da' },
+  'inatci-eniste':    { masa: [1.2, 4.2], renk: '#7a5a8e', renkKoyu: '#5d4470', kol: '#8a6a9e' },
+  'alt-ustcu':        { masa: [3.7, 4.2], renk: '#4f7f5a', renkKoyu: '#3c6346', kol: '#5e8f69' },
+  'cok-bilen-kardes': { masa: [6.2, 4.2], renk: '#7a5a34', renkKoyu: '#5c4326', kol: '#8a6a42' },
+  'spor-totocu':      { masa: [3.7, 6.3], renk: '#3f7590', renkKoyu: '#2f5a6f', kol: '#4d86a2' },
 };
 const yerOf = (k) => { const d = KADRO[k]; return d.ayakta ? d.yer : [d.masa[0] + 0.75, d.masa[1] - 0.15]; };
-const TAVLA = [5.9, 6.2];
 const KASA = { x: 8.2, y: 3.1, w: 1.0, d: 2.6 };
-// Çaycının dolaştığı yol (masaların arasındaki koridorlar)
-const ÇAYCI_YOL = [[1.7, 1.45], [5.45, 1.45], [5.45, 3.95], [6.9, 3.95], [6.9, 5.9], [6.9, 3.95], [1.6, 3.95], [1.6, 1.45]];
-const DURAK = new Set([1, 4, 6]);   // bu noktalarda çay bırakmak için durur
-
-// Gizmo: kızıl saçlı, masa masa dolaşıp herkese laf atan müdavim.
-// Her durak: koridor merkezinden (HUB) durağa giden yol; son nokta, konuştuğu kişinin yanındaki duruş yeri.
-const GIZMO_HUB = [7.75, 3.95];
+// Çaycının yolu: masaların arasındaki düz koridorlar (çay ocağından başlar)
+const ÇAYCI_YOL = [[0.6, 1.2], [5.65, 1.2], [5.65, 3.5], [7.9, 3.5], [7.9, 5.75], [3.15, 5.75], [3.15, 3.5], [0.6, 3.5]];
+const DURAK = new Set([1, 3, 5]);   // bu noktalarda çay bırakmak için durur
+// Gizmo: koridor merkezinden (HUB) her kişiye gider; son nokta duruş yeri, "bak" konuştuğu kişi
+const GIZMO_HUB = [7.9, 3.5];
 const GIZMO_DURAKLAR = [
-  { kime: 'genel-mudur',      yol: [[7.75, 4.3]] },
-  { kime: 'hizli-genc',       yol: [[5.45, 3.95], [5.45, 1.5], [6.15, 1.5]] },
-  { kime: 'yasli-dayi',       yol: [[5.45, 3.95], [5.45, 1.5], [4.75, 1.5]] },
-  { kime: 'beyaz-hayalci',    yol: [[3.3, 3.95]] },
-  { kime: 'cok-bilen-kardes', yol: [[6.1, 3.95]] },
-  { kime: 'inatci-eniste',    yol: [[4.4, 3.95], [4.4, 6.25], [4.85, 6.45]] },
-  { kime: 'spor-totocu',      yol: [[7.75, 6.5]] },
+  { kime: 'genel-mudur',      yol: [[7.9, 4.3]],                                bak: [9.45, 4.2] },
+  { kime: 'cok-bilen-kardes', yol: [[7.9, 3.95]],                               bak: [6.95, 4.05] },
+  { kime: 'beyaz-hayalci',    yol: [[7.9, 1.9]],                                bak: [6.95, 1.65] },
+  { kime: 'hizli-genc',       yol: [[5.65, 3.5], [5.65, 1.8]],                  bak: [4.45, 1.65] },
+  { kime: 'yasli-dayi',       yol: [[5.65, 3.5], [3.15, 3.5], [3.15, 1.8]],     bak: [1.95, 1.65] },
+  { kime: 'inatci-eniste',    yol: [[5.65, 3.5], [3.15, 3.5], [3.15, 4.1]],     bak: [1.95, 4.05] },
+  { kime: 'alt-ustcu',        yol: [[5.65, 3.5], [5.65, 4.1]],                  bak: [4.45, 4.05] },
+  { kime: 'spor-totocu',      yol: [[7.9, 5.75], [5.65, 5.75], [5.65, 6.2]],    bak: [4.45, 6.15] },
 ];
 // Risk Kurulu: sağ arka köşedeki denetim masası. Kupon kaydedilmeden önceki kod denetiminin sahnedeki yüzü.
 const RISK_MASA = [8.3, 0.7];
@@ -86,7 +86,6 @@ export function createIsoOffice(root) {
   let baski = null; let fisYigini = 0;
   let olcek = 2; let kare = 0; let son = 0; let calisiyorMu = true;
   const çaycı = { i: 0, p: 0, bekle: 0, x: ÇAYCI_YOL[0][0], y: ÇAYCI_YOL[0][1], yön: 1 };
-  let zar = [3, 5];
   const ilkDurak = GIZMO_DURAKLAR[0].yol.at(-1);
   const gizmo = { durak: 0, yol: [], x: ilkDurak[0], y: ilkDurak[1], bekle: 0, laf: 0, konuşuyor: false };
   let riskDamga = null;      // { t0, durum } – damga vurma ve masadaki mürekkep izi
@@ -352,6 +351,10 @@ export function createIsoOffice(root) {
         px(hx + 2, hy + 4, 1, 1, '#bfe3ff'); px(hx + 5, hy + 4, 1, 1, '#bfe3ff');
         if (o.eleştiri) px(hx + 3, hy + 7, 3, 1, PAL.göz);
         break;
+      case 'alt-ustcu':     // kısa kahverengi saç, sakal, kulağında kalem yok; boynunda düdük (eski antrenör)
+        px(hx - 1, hy - 2, 10, 3, '#5a3a22'); if (!o.arka) { px(hx, hy + 5, 8, 3, '#5a3a22'); px(hx + 3, hy + 7, 2, 1, PAL.ağız); }
+        px(hx + 3, hy + 10, 2, 3, '#c0c4c9'); px(hx + 2, hy + 13, 4, 1, '#8a9096');
+        break;
       case 'spor-totocu':   // kır saç, ince çerçeveli gözlük, kulağında kalem, gri bıyık
         px(hx - 1, hy - 2, 10, 2, '#b9b9b9'); px(hx - 1, hy, 1, 3, '#b9b9b9'); px(hx + 8, hy, 1, 3, '#b9b9b9');
         if (!o.arka) { px(hx + 1, hy + 3, 3, 2, '#3a3a3a'); px(hx + 4, hy + 3, 3, 2, '#3a3a3a'); px(hx + 2, hy + 3, 1, 1, '#d9ecff'); px(hx + 5, hy + 3, 1, 1, '#d9ecff'); px(hx + 1, hy + 6, 6, 1, '#8a8a8a'); }
@@ -389,20 +392,6 @@ export function createIsoOffice(root) {
     insan(ax, ay, { ...d, tip: k, ç: ç && k !== 'cok-bilen-kardes', eleştiri: ç && k === 'cok-bilen-kardes', faz: k.length }, t);
   }
 
-  function tavlaMasası(t) {
-    const [x, y] = TAVLA;
-    masa(x, y, t, {
-      çuha: true,
-      eşya: () => {
-        kutu(x + 0.3, y + 0.35, MASA_H, 0.8, 0.7, 1, { üst: '#c08a4a', sol: '#7a4a24', sag: '#6b3f1e' });
-        fillPoly([P(x + 0.69, y + 0.35, MASA_H + 1), P(x + 0.71, y + 0.35, MASA_H + 1), P(x + 0.71, y + 1.05, MASA_H + 1), P(x + 0.69, y + 1.05, MASA_H + 1)], '#5a3418');
-        const [zx, zy] = P(x + 0.5, y + 0.7, MASA_H + 1);
-        px(zx, zy - 2, 2, 2, '#fff'); px(zx + 3, zy - 1, 2, 2, '#fff');
-        if (zar[0] % 2) px(zx, zy - 2, 1, 1, '#111'); if (zar[1] % 2) px(zx + 4, zy, 1, 1, '#111');
-        bardak(x + 1.15, y + 0.25, MASA_H, t); bardak(x + 0.2, y + 1.15, MASA_H, t, false);
-      },
-    });
-  }
 
   function çaycıYürü(dt) {
     if (çaycı.bekle > 0) { çaycı.bekle -= dt; return; }

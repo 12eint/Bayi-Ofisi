@@ -18,6 +18,10 @@ export const DEFAULT_SETTINGS = {
   nobetAralikDk: 5,              // Genel Müdür'ün gelen kutusuna bakma aralığı
   // Maç detayı: program sayfasında olmayan pazarlar (ör. "1. Yarı ve 2. Yarıda Karşılıklı Gol Olur") için her çekimde
   // modele göre en uygun aday maçların detayı okunur. Siteye yük bindirmemek için az maç ve istekler arası bekleme.
+  // Token tasarrufu (Ayarlar'dan geri alınabilir): alt ajanların modeli ve aday paketi/kısa maç detayı.
+  // Eski davranış: ajanModeli.varsayilan = 'inherit' (Harambe ile aynı model), tokenTasarrufu.aktif = false.
+  ajanModeli: { varsayilan: 'sonnet' },
+  tokenTasarrufu: { aktif: true, adaySayisi: 15 },
   // Spor Toto: haftalık 15 maç, sistemli kolon önerisi. Tutar = kolon × kolon ücreti; maxTutar'ı aşan öneri kaydedilmez.
   sporToto: { aktif: true, maxTutar: 500, kolonUcreti: 10 },
   detayCekim: { aktif: true, macSayisi: 15, aralikMs: 1500 },
@@ -40,6 +44,8 @@ export const DEFAULT_SETTINGS = {
     'hizli-genc':    { aktif: true, minOran: 300,  maxOran: 800,   minMac: 6, maxMac: 14, tutar: 100, kuponSayisi: 1 },
     'beyaz-hayalci': { aktif: true, minOran: 20,   maxOran: 50,    minMac: 3, maxMac: 7,  tutar: 100, kuponSayisi: 2, yalnizcaVerili: true },
     // Yalnızca '1. Yarı ve 2. Yarıda Karşılıklı Gol Olur: Evet / Evet' oynar (MBS 2 → en az 2 maç; tek maç oranı gollü maçta ~6-9, kısır maçta 25+)
+    // Yalnızca Alt/Üst; istatistik (gol, şut, ceza sahası içi şut) ESPN'den → yalnızca verili maçlar
+    'alt-ustcu':     { aktif: true, minOran: 2,    maxOran: 8,     minMac: 2, maxMac: 4,  tutar: 100, kuponSayisi: 2, yalnizcaVerili: true },
     'inatci-eniste': { aktif: true, minOran: 30,   maxOran: 1000,  minMac: 2, maxMac: 3,  tutar: 100, kuponSayisi: 2 },
   },
 };

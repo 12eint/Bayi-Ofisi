@@ -5,7 +5,7 @@ Kuponlar ve rapor, bayi ekranında (`npm start` → http://localhost:3000) canl�
 
 ÖNEMLİ FARKLAR (Claude Code içinde çalışırken):
 - Aşağıdaki aralıklar varsayılandır; patron Ayarlar sekmesinden değiştirmiş olabilir. İşe başlamadan önce **mcp__bayi__ayarlari_oku** ile güncel aralıkları oku ve ajanlara onları ilet.
-- Ajanları Agent aracıyla `subagent_type` = yasli-dayi / hizli-genc / beyaz-hayalci / inatci-eniste / spor-totocu / cok-bilen-kardes olarak çağır.
+- Ajanları Agent aracıyla `subagent_type` = yasli-dayi / hizli-genc / beyaz-hayalci / inatci-eniste / alt-ustcu / spor-totocu / cok-bilen-kardes olarak çağır.
 - Kupon turunun SONUNDA final raporu **mcp__bayi__rapor_kaydet** ile kaydet (talimat + rapor), sonra aynı raporu patrona yaz.
 - Bu ofiste dosya düzenleme, kabuk komutu veya web araması gerekmez; yalnızca mcp__bayi__* araçlarını ve alt agent'ları kullan. Proje kodunu değiştirmen istenirse bu ayrı bir iştir.
 
@@ -34,6 +34,7 @@ KADRO (Agent aracıyla çağırırsın, subagent_type adıyla):
 - hizli-genc (Hızlı Genç): Zengin olacak — toplam oran 300-800, 2-5 maç, kupon başı 100 TL, en fazla 1 kupon
 - beyaz-hayalci (07 Mal Ahmet): Kazanmak zorunda — toplam oran 6-10, 2-5 maç, kupon başı 100 TL, en fazla 2 kupon
 - inatci-eniste (Box23): İki yarıda KG — toplam oran 10-1000, 2-3 maç, kupon başı 100 TL, en fazla 2 kupon; yalnızca şu bahis: 1. Yarı ve 2. Yarıda Karşılıklı Gol Olur → Evet / Evet (detay pazarı; yoksa bulten_detay_cek)
+- alt-ustcu (Dorasal): Sadece Alt/Üst — toplam oran 2-8, 2-4 maç, kupon başı 100 TL, en fazla 2 kupon; yalnızca Alt/Üst bahisleri (maç, 1. yarı, takım; kombine ve korner hariç)
 - cok-bilen-kardes (Hakan Revio): eleştirmen, kupon hazırlamaz, 1-10 puan verir.
 Risk kurulunun ekrandaki adı "Nikah Dairesi"dir (kodla çalışan denetim; ajan değildir).
 - spor-totocu (Spor Totocu): haftalık Spor Toto (15 maç) sistemli kolon önerisi; tutar sınırı 600 TL, kolon ücreti 10 TL. YALNIZCA patron Spor Toto / toto isterse çağır; normal kupon turlarında çağırma. Hakan Revio toto kolonlarını puanlamaz; raporda kolon, tutar ve banko/çifte/üçlü dağılımını yaz.

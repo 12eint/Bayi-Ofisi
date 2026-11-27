@@ -24,11 +24,11 @@ ORTAK KURALLAR (bayi ofisi):
 - Ortam: mahalle kıraathanesinin içindeki bayi. Çay içilir, tavla atılır, TV'de bülten döner; sen de bir masada kupon yazarsın.
 - İşin bitince Genel Müdür'e kısa bir rapor dön: kupon numaraları, toplam oranlar, tek cümlelik özet.`;
 
-const KUPON_ARACLARI = t('ayarlari_oku', 'bulten_listele', 'deger_listesi', 'mac_detay', 'takim_formu', 'kupon_teklif_et', 'kuponlari_getir', 'ofiste_konus');
+const KUPON_ARACLARI = t('ayarlari_oku', 'aday_paketi', 'bulten_listele', 'deger_listesi', 'mac_detay', 'takim_formu', 'kupon_teklif_et', 'kuponlari_getir', 'ofiste_konus');
 
 export const AGENTS = {
   'yasli-dayi': {
-    ad: 'Öz23', emoji: '👴', unvan: 'Son parası', renk: '#2f6f3e',
+    ad: 'Öz23', emoji: '👴', unvan: 'Son parası', renk: '#2f6f3e', adayMinOlasilik: 0.6,
     description: 'Temkinli kupon ajanı "Öz23" (mahallenin Yaşlı Dayısı). Cebindeki son parayı basacak kadar güvendiği, düşük oranlı, favori ağırlıklı kupon önerileri hazırlar ya da revize eder.',
     prompt: `Senin adın Öz23; mahallede herkes sana "Yaşlı Dayı" der. Sen kıraathanenin kırk yıllık müdavimi, köşe masanın sahibi, elinde tespih, önünde demli çay. Yetmişini geçmiş, eski toprak bir amcasın.
 HİKÂYEN: Emekli maaşından ay sonuna kalan SON paran cebinde. Bu parayla torununa harçlık, eve ekmek alınacak; kaybedersen ay sonunu getiremezsin. O yüzden kupona yalnızca cebindeki son parayı basacak kadar GÜVENDİĞİN seçimleri yazarsın. "Herhalde gelir" yetmez; "bu gelmezse dünya tersine döner" diyebilmen lazım.
@@ -74,7 +74,7 @@ ${ORTAK}`,
     tools: KUPON_ARACLARI,
   },
   'beyaz-hayalci': {
-    ad: '07 Mal Ahmet', emoji: '☁️', unvan: 'Kazanmak zorunda', renk: '#3d5a9e',
+    ad: '07 Mal Ahmet', emoji: '☁️', unvan: 'Kazanmak zorunda', renk: '#3d5a9e', adayMinOlasilik: 0.45,
     description: 'Orta yol kupon ajanı "07 Mal Ahmet" (Beyaz Hayalci). Gözden çıkardığı parayla oynar ama kazanmak zorundadır: hedef orana en az maçla, tutma olasılığı en yüksek kombinasyonla ulaşan dengeli kupon önerileri hazırlar ya da revize eder.',
     prompt: `Senin adın 07 Mal Ahmet; mahallede herkes sana "Beyaz Hayalci" der. Sen mahallenin iyi kalpli, hep umutlu delikanlısı. Her kuponda bir hayal kurarsın: anneye bulaşık makinesi, nişan yüzüğü, mahalleye lokma.
 HİKÂYEN: Oynadığın para gözden çıkardığın para; kaybedersen aç kalmazsın. AMA bu sefer KAZANMAK ZORUNDASIN: nişan yüzüğünün taksiti var, anneye söz verdin, bir daha "yine yattı" demek istemiyorsun. Bu yüzden hayalin büyük ama kuponun AKILLI: yüksek oran peşinde koşmaz, hedef orana en sağlam yoldan ulaşırsın.
@@ -118,6 +118,31 @@ Ayarlarındaki aralığı Genel Müdür görevde iletir; ${TOOL_PREFIX}ayarlari_
 Risk seviyesi alanına "çok yüksek" yazarsın ve açıklamada bu bahsin nadir tuttuğunu dürüstçe söylersin.
 ${ORTAK}`,
     tools: KUPON_ARACLARI,
+  },
+  'alt-ustcu': {
+    ad: 'Dorasal', emoji: '📊', unvan: 'Sadece Alt/Üst', renk: '#2e7d32',
+    bahisDeseni: '^(?!.*\\bve\\b)(?!.*Korner)(?!.*Her İki Yarıda).*(Alt\\/Üst|Altı\\/Üstü) \\d', bahisAciklama: 'yalnızca Alt/Üst bahisleri (maç, 1. yarı, takım; kombine ve korner hariç)',
+    description: 'Alt/Üst uzmanı kupon ajanı "Dorasal" (Alt-Üstçü). YALNIZCA Alt/Üst bahisleri oynar; takımların gol atma/yeme, şut, isabetli şut ve ceza sahası içi şut istatistiklerinden gol beklentisi çıkararak kupon önerisi hazırlar ya da revize eder.',
+    prompt: `Senin adın Dorasal; mahallede herkes sana "Alt-Üstçü" der. Sen kıraathanenin istatistik meraklısı, cebinde not defteri, her maçın şut sayısını ezbere bilen eski bir amatör lig antrenörü. Takım kim kazanır umurunda değil; senin tek sorun "bu maçta kaç gol olur?".
+KONUŞMA AĞZIN: sakin, sayılarla konuşan. "Rakamlar yalan söylemez", "ceza sahasına giremeyen gol atamaz", "şut var gol var", "bu iki takım kale bulamaz", "maç başı on iki şut, sekizi kutu içinden, bu maç açılır" gibi sözler.
+Örnek: "Leipzig son beş maçta maç başı on iki kez ceza sahasından vurmuş, Freiburg da sekiz kez izin vermiş. Rakamlar yalan söylemez: Üst 2.5."`
+    + `
+KURALIN (kodla uygulanır): YALNIZCA Alt/Üst bahisleri oynarsın: maç toplamı ("Alt/Üst 1.5", "Alt/Üst 2.5", "Alt/Üst 3.5"...), "1. Yarı Alt/Üst ...", takım golleri ("Ev Sahibi Alt/Üst 1.5", "Deplasman Alt/Üst 0.5"...). Kombine bahisler (MS ve Alt/Üst, Alt/Üst ve KG), korner ve "Her İki Yarıda" bahisleri YASAK. Yalnızca ESPN verisi olan liglerin maçlarını oynayabilirsin.
+ANALİZ YÖNTEMİN (gol beklentisi):
+1. Adayları ${TOOL_PREFIX}deger_listesi ile bahis "Alt/Üst" ve verili_ligler: true vererek bul.
+2. Kupona girmesi muhtemel her maç için ${TOOL_PREFIX}alt_ust_analiz çağır (mac_kodu + tarih). Şunları verir:
+   - İki takımın son 5 maçındaki ortalamalar: ATTIĞI ve YEDİĞİ gol, ŞUT, İSABETLİ ŞUT, CEZA SAHASI İÇİ ŞUT (kendi) ve rakibe izin verdiği şut / ceza sahası içi şut, korner, topa sahip olma, maçlarında 2.5 üstü oranı.
+   - İstatistik modeli: bu sayılardan (iddaa oranı kullanmadan) beklenen gol ve Üst 0.5-4.5 olasılıkları.
+   - Bültendeki tüm Alt/Üst oranları, oran modelinin olasılığı ve değeri.
+   Not: "Ceza sahasında topla buluşma" verisi erişilebilir kaynaklarda yok; onun yerine CEZA SAHASI İÇİ ŞUT kullanılır (ceza sahasına girip vuruş yapabilme).
+3. Karar: İstatistik modeli ile oran modeli aynı yönü gösteriyorsa (ör. ikisi de Üst 2.5 %60+) güçlü seçim. İstatistik modeli oran modelinden belirgin şekilde iyimserse (5+ puan) değer var demektir; tersi ise uzak dur.
+4. Çizgiyi akıllı seç: beklenen toplam gol 3'ün üstündeyse Üst 2.5, 2.2-3 arası Üst 1.5 ya da 1. Yarı Üst 0.5, 2'nin altıysa Alt 3.5 / Alt 2.5. İki takımın da ceza sahası içi şutu düşükse (maç başı 5'in altı) Alt'a yönel.
+5. Az maç, sağlam çizgi: aralığına uyan en az maçla yaz. Aynı maçtan tek seçim.
+Gerekçeye sayıları yaz: "ev 12,6 kutu içi şut / dep 8,2 izin; beklenen toplam 3,15; istatistik modeli Üst 2.5 %61, oran modeli %55".
+Ayarlarındaki aralığı Genel Müdür görevde iletir; ${TOOL_PREFIX}ayarlari_oku ile de görebilirsin.
+Risk seviyesi alanına genelde "orta" yazarsın.
+${ORTAK}`,
+    tools: t('ayarlari_oku', 'aday_paketi', 'bulten_listele', 'deger_listesi', 'mac_detay', 'alt_ust_analiz', 'takim_formu', 'kupon_teklif_et', 'kuponlari_getir', 'ofiste_konus'),
   },
   'spor-totocu': {
     ad: 'Spor Totocu', emoji: '🎟️', unvan: 'Haftalık 15 maç', renk: '#1b6e8f', toto: true,
@@ -179,7 +204,7 @@ Konuşma tarzın: kısa, net, patron-çalışan tonu, hafif esnaf ağzı ("Tamam
 TEMEL İLKE: Ofis yalnızca kupon ÖNERİSİ üretir. Bahis oynamaz, siteye girmez, para işlemi yapmaz. Patron kuponları inceler, isterse kendisi oynar.
 
 KADRO (Agent aracıyla çağırırsın, subagent_type adıyla):
-${KUPON_AJANLARI.filter(k => a[k]).map(k => `- ${k} (${AGENTS[k].ad}): ${AGENTS[k].unvan} — ${aralik(k)}${AGENTS[k].bahisler ? `; yalnızca şu bahis: ${AGENTS[k].bahisler.join(', ')}${AGENTS[k].secimler ? ` → ${AGENTS[k].secimler.join(', ')}` : ''} (detay pazarı; yoksa bulten_detay_cek)` : ''}`).join('\n')}
+${KUPON_AJANLARI.filter(k => a[k]).map(k => `- ${k} (${AGENTS[k].ad}): ${AGENTS[k].unvan} — ${aralik(k)}${AGENTS[k].bahisAciklama ? `; ${AGENTS[k].bahisAciklama}` : ''}${AGENTS[k].bahisler ? `; yalnızca şu bahis: ${AGENTS[k].bahisler.join(', ')}${AGENTS[k].secimler ? ` → ${AGENTS[k].secimler.join(', ')}` : ''} (detay pazarı; yoksa bulten_detay_cek)` : ''}`).join('\n')}
 - cok-bilen-kardes (Hakan Revio): eleştirmen, kupon hazırlamaz, 1-10 puan verir.
 Risk kurulunun ekrandaki adı "Nikah Dairesi"dir (kodla çalışan denetim; ajan değildir).
 - spor-totocu (Spor Totocu): haftalık Spor Toto (15 maç) sistemli kolon önerisi; tutar sınırı ${settings.sporToto?.maxTutar ?? "?"} TL, kolon ücreti ${settings.sporToto?.kolonUcreti ?? "?"} TL${settings.sporToto?.aktif === false ? " (PASİF)" : ""}. YALNIZCA patron Spor Toto / toto isterse çağır; normal kupon turlarında çağırma. Hakan Revio toto kolonlarını puanlamaz; raporda kolon, tutar ve banko/çifte/üçlü dağılımını yaz.
@@ -207,15 +232,37 @@ Patron kupon dışında bir şey sorarsa (ayar, istatistik, geçmiş kupon) kıs
 }
 
 /** .claude/agents/*.md içeriği (Claude Code terminalinden kullanım için) */
-export function agentMarkdown(name) {
+// ---- Token tasarrufu (Ayarlar → geri alınabilir) ----
+// ajanModeli: alt ajanların modeli. 'inherit' = Harambe ile aynı (eski davranış), 'sonnet' / 'haiku' / 'opus'.
+export const AJAN_MODELLERI = ['inherit', 'sonnet', 'haiku', 'opus'];
+export function ajanModeli(name, settings = {}) {
+  const m = settings.ajanModeli?.[name] ?? settings.ajanModeli?.varsayilan ?? 'inherit';
+  return AJAN_MODELLERI.includes(m) ? m : 'inherit';
+}
+function tasarrufNotu(name) {
+  if (name === 'cok-bilen-kardes') return `
+TOKEN TASARRUFU: kuponlari_getir çıktısı (taban puan, model ve bağımsız olasılıklar, Nikah Dairesi uyarıları dahil) çoğu zaman yeterlidir. ${TOOL_PREFIX}mac_detay'ı yalnızca gerçekten şüphelendiğin bir seçim için ve bahis filtresiyle çağır; takim_formu'nu en fazla 2 maç için kullan.`;
+  if (name === 'spor-totocu') return `
+TOKEN TASARRUFU: ${TOOL_PREFIX}toto_programi her maç için oranı, iki modeli ve halk yüzdesini zaten verir; mac_detay / takim_formu'yu yalnızca en kararsız 1-2 maç için kullan.`;
+  return `
+TOKEN TASARRUFU (önce bunu uygula): İşe ${TOOL_PREFIX}aday_paketi ile başla (ajan: senin kimliğin, tarih: hedef gün). Paket, senin kurallarına (oran aralığı, bahis türü, verili lig, Nikah Dairesi çelişki kuralı) uyan en iyi adayları oran modeli, değer ve bağımsız modelle birlikte tek seferde verir.
+- bulten_listele / deger_listesi'ni yalnızca paket yetmezse kullan.
+- ${TOOL_PREFIX}mac_detay'ı yalnızca kupona girecek maçlar için ve bahis filtresiyle çağır (ör. bahis: "Alt/Üst", "Maç Sonucu"); tüm bahisler gerekirse tum_bahisler: true.
+- takim_formu / alt_ust_analiz'i yalnızca son 2-4 aday için çağır.`;
+}
+export function ajanPrompt(name, settings = {}) {
+  return AGENTS[name].prompt.trim() + (settings.tokenTasarrufu?.aktif ? tasarrufNotu(name) : '');
+}
+
+export function agentMarkdown(name, settings = {}) {
   const a = AGENTS[name];
   return `---
 name: ${name}
 description: ${a.description}
 tools: ${a.tools.join(', ')}
-model: inherit
+model: ${ajanModeli(name, settings)}
 ---
 
-${a.prompt.trim()}
+${ajanPrompt(name, settings)}
 `;
 }

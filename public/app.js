@@ -12,7 +12,7 @@ const api = async (url, opt = {}) => {
 };
 
 const S = { durum: null, kadro: {}, maclar: [], kuponlar: [], calisiyor: false, tvSayfa: 0, tvSayfalar: [] };
-const AJAN_SIRA = ['genel-mudur', 'yasli-dayi', 'hizli-genc', 'beyaz-hayalci', 'inatci-eniste', 'spor-totocu', 'cok-bilen-kardes'];
+const AJAN_SIRA = ['genel-mudur', 'yasli-dayi', 'hizli-genc', 'beyaz-hayalci', 'inatci-eniste', 'alt-ustcu', 'spor-totocu', 'cok-bilen-kardes'];
 
 /* ---------------- Sekmeler ---------------- */
 function sekmeAc(ad) {
@@ -339,7 +339,7 @@ function fisOzetHtml(k) {
     </button>`;
 }
 /* Fiş sekmeleri: Tümü + her kupon ajanı. Seçim tarayıcıda hatırlanır. */
-const FIS_AJANLARI = ['yasli-dayi', 'hizli-genc', 'beyaz-hayalci', 'inatci-eniste'];
+const FIS_AJANLARI = ['yasli-dayi', 'hizli-genc', 'beyaz-hayalci', 'inatci-eniste', 'alt-ustcu'];
 let fisSekme = (() => { try { return localStorage.getItem('fisSekme') || 'hepsi'; } catch { return 'hepsi'; } })();
 function fisSekmeleriCiz() {
   const say = (a) => S.kuponlar.filter(k => a === 'hepsi' || k.ajan === a).length;
@@ -582,6 +582,7 @@ async function ayarFormuDoldur() {
   for (const k of ['gunlukButce', 'tekMacMinOran', 'tekMacMaxOran', 'bultenMaxYasSaat', 'ofisModu', 'oturumButceUsd', 'aboneligeSinirYuzde', 'nobetAralikDk']) f.elements[k].value = a[k];
   f.elements.mbsKurali.checked = !!a.mbsKurali;
   f.elements.totoMaxTutar.value = a.sporToto?.maxTutar ?? ''; f.elements.totoKolonUcreti.value = a.sporToto?.kolonUcreti ?? ''; f.elements.totoAktif.checked = a.sporToto?.aktif !== false;
+  f.elements.ajanModeli.value = a.ajanModeli?.varsayilan ?? 'inherit'; f.elements.tokenTasarrufu.checked = !!a.tokenTasarrufu?.aktif;
   f.elements.ligDahil.value = a.ligDahil.join(', '); f.elements.ligHaric.value = a.ligHaric.join(', ');
   $('#ajanAyarlari').innerHTML = Object.entries(a.ajanlar).map(([k, x]) => `<div class="ajan-ayar" data-ajan="${k}">
     <h3>${esc(S.kadro[k]?.emoji ?? '')} ${esc(S.kadro[k]?.ad ?? k)}</h3>
@@ -596,6 +597,7 @@ $('#ayarForm').addEventListener('submit', async (e) => {
     bultenMaxYasSaat: +f.elements.bultenMaxYasSaat.value, ofisModu: f.elements.ofisModu.value, oturumButceUsd: +f.elements.oturumButceUsd.value,
     aboneligeSinirYuzde: +f.elements.aboneligeSinirYuzde.value, nobetAralikDk: +f.elements.nobetAralikDk.value,
     mbsKurali: f.elements.mbsKurali.checked, ligDahil: liste(f.elements.ligDahil.value), ligHaric: liste(f.elements.ligHaric.value), ajanlar: {},
+    ajanModeli: { varsayilan: f.elements.ajanModeli.value }, tokenTasarrufu: { aktif: f.elements.tokenTasarrufu.checked },
     sporToto: { maxTutar: +f.elements.totoMaxTutar.value, kolonUcreti: +f.elements.totoKolonUcreti.value, aktif: f.elements.totoAktif.checked },
   };
   $$('.ajan-ayar').forEach(d => {

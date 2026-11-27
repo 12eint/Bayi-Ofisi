@@ -57,6 +57,8 @@ const KASA = { x: 8.2, y: 3.1, w: 1.0, d: 2.6 };
 const ÇAYCI_YOL = [[0.6, 1.2], [5.65, 1.2], [5.65, 3.5], [7.9, 3.5], [7.9, 5.75], [3.15, 5.75], [3.15, 3.5], [0.6, 3.5]];
 const DURAK = new Set([1, 3, 5]);   // bu noktalarda çay bırakmak için durur
 // Gizmo: koridor merkezinden (HUB) her kişiye gider; son nokta duruş yeri, "bak" konuştuğu kişi
+// Gizmo şimdilik yedekte: geri getirmek için true yap (ofis3d.js'te de aynı anahtar var)
+const GIZMO_AKTIF = false;
 const GIZMO_HUB = [7.9, 3.5];
 const GIZMO_DURAKLAR = [
   { kime: 'genel-mudur',      yol: [[7.9, 4.3]],                                bak: [9.45, 4.2] },
@@ -496,7 +498,7 @@ export function createIsoOffice(root) {
   let önceki = 0;
   function çiz(t) {
     const dt = önceki ? Math.min(200, t - önceki) : 66; önceki = t;
-    çaycıYürü(dt); gizmoYürü(dt);
+    çaycıYürü(dt); if (GIZMO_AKTIF) gizmoYürü(dt);
     ctx.fillStyle = '#1a1512'; ctx.fillRect(0, 0, W, H);
     duvarlar(t); pencereVeTabela(t); tvler(t); zemin();
     const n = [];
@@ -510,7 +512,7 @@ export function createIsoOffice(root) {
     n.push({ key: çaycı.x + çaycı.y, f: () => { const [a, b] = P(çaycı.x, çaycı.y); insan(a, b, { tip: 'çaycı', ayakta: true, yürü: çaycı.bekle <= 0, tepsi: true, renk: '#f4f1ea', renkKoyu: '#d9d3c4', kol: '#f4f1ea', yelek: '#1a1a1a', pantolon: '#1a1a1a' }, t); } });
     n.push({ key: RISK_YER[0] + RISK_YER[1], f: () => riskKişi(t) });
     n.push({ key: RISK_MASA[0] + RISK_MASA[1] + MASA * 2 - 0.6, f: () => riskMasası(t) });
-    n.push({ key: gizmo.x + gizmo.y, f: () => { const [a, b] = P(gizmo.x, gizmo.y); insan(a, b, { tip: 'gizmo', ayakta: true, yürü: !gizmo.konuşuyor && gizmo.bekle <= 0, para: gizmo.konuşuyor, renk: '#2f6fd6', renkKoyu: '#2254a8', kol: PAL.ten, kısaKol: true, pantolon: '#8fb8e0', kot: '#6f9ccc', ayakkabı: '#ffffff', faz: 2 }, t); } });
+    if (GIZMO_AKTIF) n.push({ key: gizmo.x + gizmo.y, f: () => { const [a, b] = P(gizmo.x, gizmo.y); insan(a, b, { tip: 'gizmo', ayakta: true, yürü: !gizmo.konuşuyor && gizmo.bekle <= 0, para: gizmo.konuşuyor, renk: '#2f6fd6', renkKoyu: '#2254a8', kol: PAL.ten, kısaKol: true, pantolon: '#8fb8e0', kot: '#6f9ccc', ayakkabı: '#ffffff', faz: 2 }, t); } });
     n.push({ key: KASA.x + KASA.y + KASA.w + KASA.d - 0.3, f: () => tezgâh(t) });
     n.push({ key: 9.6 + 7.2, f: () => bitki(9.3, 7.2) });
     n.push({ key: 0.3 + 7.5, f: () => bitki(0.3, 7.3) });
@@ -612,6 +614,7 @@ export function createIsoOffice(root) {
   gizmoEtiket.className = 'iso-etiket iso-etiket-gizmo';
   gizmoEtiket.innerHTML = '<b>Gizmo</b><span></span>';
   katman.appendChild(gizmoEtiket); etiketler.gizmo = gizmoEtiket;
+  if (!GIZMO_AKTIF) gizmoEtiket.style.display = 'none';
   function gizmoDurum(metin) {
     gizmoEtiket.querySelector('span').textContent = metin;
     gizmoEtiket.classList.toggle('aktif', metin === 'laf atıyor');

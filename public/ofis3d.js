@@ -22,6 +22,8 @@ const KASA = { x: 8.2, z: 3.1, w: 1.0, d: 2.6, h: 0.8 };
 const ÇAYCI_YOL = [[0.6, 1.2], [5.65, 1.2], [5.65, 3.5], [7.9, 3.5], [7.9, 5.75], [3.15, 5.75], [3.15, 3.5], [0.6, 3.5]];
 const DURAK = new Set([1, 3, 5]);   // bu noktalarda çay bırakmak için durur
 // Gizmo: koridor merkezinden (HUB) her kişiye gider; son nokta duruş yeri, "bak" konuştuğu kişi
+// Gizmo şimdilik yedekte: geri getirmek için true yap (iso.js'te de aynı anahtar var)
+const GIZMO_AKTIF = false;
 const GIZMO_HUB = [7.9, 3.5];
 const GIZMO_DURAKLAR = [
   { kime: 'genel-mudur',      yol: [[7.9, 4.3]],                                bak: [9.45, 4.2] },
@@ -364,6 +366,7 @@ export function createOfis3D(root) {
   const ilk = GIZMO_DURAKLAR[0].yol.at(-1);
   const gizmo = { durak: 0, yol: [], x: ilk[0], z: ilk[1], bekle: 0, laf: 0, konuşuyor: false };
   const gizmoK = insan({ tip: 'gizmo', ayakta: true, x: gizmo.x, z: gizmo.z, renk: '#2f6fd6', kol: TEN, kısaKol: true, pantolon: '#8fb8e0', ayakkabı: '#ffffff' });
+  gizmoK.g.visible = GIZMO_AKTIF;
 
   // Risk Kurulu
   masa(RISK_MASA[0], RISK_MASA[1]); sandalye(RISK_YER[0], RISK_YER[1] - 0.05);
@@ -391,12 +394,13 @@ export function createOfis3D(root) {
     katman.appendChild(e); etiketler[k] = e; return e;
   }
   etiketYap('gizmo', 'Gizmo', 'iso-etiket-gizmo');
+  if (!GIZMO_AKTIF) etiketler.gizmo.style.display = 'none';
   const riskEtiket = etiketYap('risk-kurulu', 'Nikah Dairesi', 'iso-etiket-risk');
   const v = new THREE.Vector3();
   const kişiOf = (k) => k === 'gizmo' ? gizmoK : k === 'risk-kurulu' ? riskK : kişiler[k];
   const ekranlar = {};
   function başNoktası(k) {
-    const p = kişiOf(k); if (!p) return null;
+    const p = kişiOf(k); if (!p || !p.g.visible) return null;
     v.set(0, p.başÜstü + (k === 'beyaz-hayalci' ? 0.45 : 0.05), 0); p.g.localToWorld(v); v.project(kamera);
     if (v.z > 1) return null;
     return [(v.x + 1) / 2 * genişlik, (1 - v.y) / 2 * yükseklik];
@@ -536,9 +540,9 @@ export function createOfis3D(root) {
   }
   function çiz(t) {
     const dt = önceki ? Math.min(200, t - önceki) : 16; önceki = t; kare++;
-    çaycıAdım(dt, t); gizmoAdım(dt, t);
+    çaycıAdım(dt, t); if (GIZMO_AKTIF) { gizmoAdım(dt, t); göz(gizmoK, t, 2); }
     for (const k of Object.keys(KADRO)) { ajanAnim(k, t); göz(kişiler[k], t, k.length); }
-    göz(gizmoK, t, 2); göz(riskK, t, 5);
+    göz(riskK, t, 5);
     riskAnim(t); uçanAdım(t);
     // çay buharı, kedi kuyruğu, neon titreme, saat
     buharlar.forEach((b, i) => { const f = ((t / 1400) + i / 3) % 1; b.position.set(0.75 + Math.sin(t / 300 + i) * 0.04, 1.32 + f * 0.45, 0.55); b.material.opacity = 0.5 * (1 - f); b.scale.setScalar(0.6 + f); });

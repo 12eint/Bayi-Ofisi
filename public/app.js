@@ -11,7 +11,7 @@ const api = async (url, opt = {}) => {
   return j;
 };
 
-const S = { durum: null, kadro: {}, maclar: [], kuponlar: [], calisiyor: false, tvSayfa: 0, tvSayfalar: [] };
+const S = { durum: null, kadro: {}, maclar: [], kuponlar: [], calisiyor: false, tvSayfa: 0, tvSayfalar: [], canli: { maclar: {}, secimler: {} } };
 const AJAN_SIRA = ['genel-mudur', 'yasli-dayi', 'hizli-genc', 'beyaz-hayalci', 'inatci-eniste', 'alt-ustcu', 'spor-totocu', 'cok-bilen-kardes'];
 
 /* ---------------- Sekmeler ---------------- */
@@ -280,6 +280,32 @@ async function kuponlariYukle() {
   sahne('setTicketCount', S.kuponlar.length);
   fisleriCiz();
 }
+/* Canlı skor (sunucu ESPN'den 90 sn'de bir çeker; ajan/token yok) */
+async function canliYukle() {
+  try { S.canli = await api('/api/canli'); } catch { return; }
+  if (S.kuponlar.length) fisleriCiz();
+}
+function canliMacOf(k, s) { return S.canli?.maclar?.[`${k.tarih}|${s.mac_kodu}`] ?? null; }
+function canliSatir(k, s) {
+  if (s.sonuc) return '';
+  const m = canliMacOf(k, s); if (!m) return '';
+  if (m.bulunamadi) return '<div class="canli-satir canli-yok">canlı skor yok</div>';
+  const c = S.canli.secimler?.[s.id];
+  const dk = m.tamamlandi ? 'MS' : (m.dk || '');
+  const iy = m.iy && m.devre >= 2 ? ` <small>(İY ${m.iy[0]}-${m.iy[1]})</small>` : '';
+  const ne = !c ? 'değerlendirilemiyor' : c.kesin ? (c.tutuyor ? 'TUTTU' : 'YATTI') : (c.tutuyor ? 'şu an tutuyor' : 'şu an tutmuyor');
+  const sinif = !c ? '' : c.tutuyor ? (c.kesin ? 'kesin-tuttu' : 'tutuyor') : (c.kesin ? 'kesin-yatti' : 'tutmuyor');
+  return `<div class="canli-satir ${sinif}"><span>${m.tamamlandi ? '' : '<i class="canli-nokta"></i>'}${esc(dk)} · <b>${m.skor[0]}-${m.skor[1]}</b>${iy}</span><span>${ne}</span></div>`;
+}
+function canliOzet(k) {
+  let canli = 0, tutan = 0;
+  for (const s of k.secimler) {
+    if (s.sonuc) continue;
+    const c = S.canli?.secimler?.[s.id]; if (!c) continue;
+    canli++; if (c.tutuyor) tutan++;
+  }
+  return canli ? { canli, tutan } : null;
+}
 // Model olasılığı gösterimi: küçük olasılıklarda ondalık basamak artar (%0.42 gibi)
 function yuzdeYaz(p) {
   if (p == null) return '–';
@@ -300,6 +326,7 @@ function fisHtml(k) {
         <div class="s1"><span>${esc(s.mac_kodu)} · ${esc(s.saat ?? '')}</span><span>MBS ${s.mbs ?? 1}</span></div>
         <div>${esc(s.mac_adi)}</div>
         <div class="s2"><span>${esc(s.bahis)}: <b>${esc(s.secim)}</b></span><span>${Number(s.oran).toFixed(2)}</span></div>
+        ${canliSatir(k, s)}
         ${s.model_olasilik != null ? `<div class="s3"><span>Model ${yuzdeYaz(s.model_olasilik)}</span><span class="${degerSinif(s.deger)}">değer ${degerYaz(s.deger)}</span></div>` : ''}
         ${s.gerekce ? `<div class="grc">${esc(s.gerekce)}</div>` : ''}</div>`).join('')}
     <div class="toplam">
@@ -334,6 +361,7 @@ function fisOzetHtml(k) {
       <span class="fo-satir"><span>Tutar</span><b>${tl(k.tutar)}</b></span>
       <span class="fo-satir fo-kazanc"><span>Olası kazanç</span><b>${tl(k.olasi_kazanc)}</b></span>
       ${k.model_olasilik != null ? `<span class="fo-satir" title="Poisson modeline göre kuponun tutma olasılığı (oranlardan hesaplanır)"><span>Model tutma</span><b>${yuzdeYaz(k.model_olasilik)}</b></span>` : ''}
+      ${(() => { const o = canliOzet(k); return o ? `<span class="fo-canli${o.tutan === o.canli ? ' iyi' : ''}"><i class="canli-nokta"></i>Canlı: ${o.tutan}/${o.canli} maç şu an tutuyor</span>` : ''; })()}
       ${k.risk_uyarilari?.length ? `<span class="fo-risk" title="${esc(k.risk_uyarilari.join(' · '))}">⚠ Nikah Dairesi: ${k.risk_uyarilari.length} uyarı</span>` : ''}
       <span class="fo-ac">Fişi aç ▸</span>
     </button>`;
@@ -545,6 +573,7 @@ function olaylariDinle() {
       case 'kupon': sahne('printTicket'); kuponlariYukle(); break;
       case 'toto': sahne('printTicket'); totoYukle(); break;
       case 'puan': kuponlariYukle(); break;
+      case 'canli': canliYukle(); break;
       case 'bulten': bultenYukle(); durumYukle(); break;
       case 'oturum':
         if (e.mod === 'claude-code') masaDurum('genel-mudur', 'Claude Code’da çalışıyor...', true);
@@ -742,7 +771,7 @@ document.addEventListener('change', async (e) => {
 (async () => {
   try {
     await durumYukle();
-    await Promise.all([bultenYukle(), kuponlariYukle(), sohbetYukle(), totoYukle()]);
+    await Promise.all([bultenYukle(), kuponlariYukle(), sohbetYukle(), totoYukle(), canliYukle()]);
     gorunumUygula(gorunumOku());
   } catch (e) { sistemMesaji(`Sunucuya bağlanılamadı: ${e.message}`, true); }
   olaylariDinle();

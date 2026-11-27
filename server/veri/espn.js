@@ -120,6 +120,40 @@ export async function gunSonuclari(slug, gun, fetchFn) {
   }
   return out;
 }
+/**
+ * Canlı skor: günün tüm maçları (başlamamış / oynanıyor / bitti). tazelikMs kısa tutulur (canlı için ~1 dk).
+ * Dönen: { ev, dep, evKisa, depKisa, durum: 'pre'|'in'|'post', dk, devre, skor:[e,d], iy:[e,d]|null, ikinci:[e,d]|null }
+ * iy/ikinci: gol dakikalarından yarı ayrımı; gol listesi skorla tutmuyorsa null.
+ */
+export async function gunSkorlari(slug, gun, fetchFn, tazelikMs = 60000) {
+  const j = await getir(`site/v2/sports/soccer/${slug}/scoreboard?dates=${gun.replaceAll('-', '')}`, tazelikMs, fetchFn);
+  const out = [];
+  for (const e of j.events ?? []) {
+    const c = e.competitions?.[0]; const st = c?.status ?? e.status ?? {};
+    const ev = c?.competitors?.find(t => t.homeAway === 'home'), dep = c?.competitors?.find(t => t.homeAway === 'away');
+    if (!ev || !dep) continue;
+    const goller = (c.details ?? []).filter(d => d.scoringPlay);
+    const say = (id, iy) => goller.filter(d => String(d.team?.id) === String(id) && (iy == null || ilkYari(d.clock?.displayValue) === iy)).length;
+    const skor = [Number(ev.score) || 0, Number(dep.score) || 0];
+    const tamMi = say(ev.team.id) === skor[0] && say(dep.team.id) === skor[1];
+    const durum = st.type?.state ?? (st.type?.completed ? 'post' : 'pre');
+    out.push({ ev: ev.team.displayName, dep: dep.team.displayName, evKisa: ev.team.shortDisplayName, depKisa: dep.team.shortDisplayName,
+      durum, tamamlandi: !!st.type?.completed, dk: st.type?.shortDetail ?? st.displayClock ?? '', devre: st.period ?? 0, skor,
+      iy: tamMi ? [say(ev.team.id, true), say(dep.team.id, true)] : null,
+      ikinci: tamMi ? [say(ev.team.id, false), say(dep.team.id, false)] : null });
+  }
+  return out;
+}
+/** iddaa maçını ESPN'in canlı listesinde bulur (gün + bir önceki ABD günü) */
+export async function canliMac({ lig, ev, deplasman, gun }, fetchFn) {
+  const slug = espnLig(lig); if (!slug) return null;
+  const dun = new Date(new Date(`${gun}T12:00:00Z`).getTime() - 86400000).toISOString().slice(0, 10);
+  const liste = [...await gunSkorlari(slug, gun, fetchFn), ...await gunSkorlari(slug, dun, fetchFn, 30 * 60000)];
+  const evT = takimBul(ev, liste.map(x => ({ ad: x.ev, kisa: x.evKisa, x })));
+  const depT = takimBul(deplasman, liste.map(x => ({ ad: x.dep, kisa: x.depKisa, x })));
+  return evT && depT && evT.x === depT.x ? evT.x : null;
+}
+
 /** iddaa maçını (lig, ev, dep, gün) ESPN sonucuyla eşleştirir */
 export async function macSonucu({ lig, ev, deplasman, gun }, fetchFn) {
   const slug = espnLig(lig); if (!slug) return null;

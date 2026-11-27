@@ -14,6 +14,7 @@ import { runOffice, stopOffice, isBusy, officeMode } from './agents/orchestrator
 import { listCoupons, getCoupon } from './agents/rules.js';
 import { AGENTS, GM } from './agents/definitions.js';
 import { totoProgrami, totoKuponlari, totoSonuclariGuncelle } from './toto.js';
+import { canliDurum, canliGuncelle } from './canli.js';
 import { enterScore, setSelectionResult, history, agentStats, pendingMatches, sonuclariOtomatikGetir, tutmaKarnesi, eksikBagimsizDoldur, genelIstatistik } from './stats.js';
 import { gelenKutusunuIsle, cliDurumu, girisKontrol, durdur as cliDurdur } from './agents/cli-runner.js';
 
@@ -111,6 +112,7 @@ app.get('/api/toto', wrap(async () => {
   let program = null; try { program = await totoProgrami(); } catch { /* iddaa'ya ulaşılamadı */ }
   return { program, kuponlar: totoKuponlari({ donem: program?.donem }), ayar: getSettings().sporToto };
 }));
+app.get('/api/canli', wrap(() => canliDurum()));
 // ESPN'den sonuçları (ilk yarı dahil) otomatik getir
 app.post('/api/sonuc/otomatik', wrap(() => sonuclariOtomatikGetir()));
 app.post('/api/sonuc/secim', wrap((req) => { setSelectionResult(Number(req.body.secim_id), req.body.sonuc ?? null); return { ok: true }; }));
@@ -142,6 +144,13 @@ if (officeMode() === 'claude-code') {
 // Saatte bir: biten kupon maçlarının sonucunu ESPN'den getir (sonucu bekleyen yoksa istek atılmaz)
 const otoSkor = () => totoSonuclariGuncelle().catch(() => 0).then(n => { if (n) emit('toto', {}); }).then(() => sonuclariOtomatikGetir()).then(r => { if (r.girilen) { console.log(`  Otomatik sonuç: ${r.girilen} maç girildi.`); emit('puan', {}); } }).catch(() => {});
 setTimeout(otoSkor, 60000); setInterval(otoSkor, 3600000);
+// 90 saniyede bir: başlamış kupon maçlarının canlı skoru (takip edilecek maç yoksa ağ isteği atılmaz; ajan/token yok)
+let canliMesgul = false;
+const canliTur = () => {
+  if (canliMesgul) return; canliMesgul = true;
+  canliGuncelle().then(r => { if (r.degisti) emit('canli', {}); if (r.biten) emit('puan', {}); }).catch(() => {}).finally(() => { canliMesgul = false; });
+};
+setTimeout(canliTur, 5000); setInterval(canliTur, 90000);
 // Eski seçimlere bağımsız model olasılığı (karne için; ESPN puan durumu önbellekte)
 setTimeout(() => eksikBagimsizDoldur().then(n => n && console.log(`  Bağımsız olasılık: ${n} eski seçime eklendi.`)).catch(() => {}), 20000);
 try { const n = eksikModelleriDoldur(); if (n) console.log(`  Model olasılığı: ${n} eski kupona eklendi.`); }

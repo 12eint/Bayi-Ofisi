@@ -8,7 +8,8 @@ import { refreshBulletin } from '../bulletin/index.js';
 import { detaylariCek, IKI_YARI_KG } from '../bulletin/detay.js';
 import { espnLig, takimFormu } from '../veri/espn.js';
 import { tutmaKarnesiYazi } from '../stats.js';
-import { tabanPuan, tabanYazi, revioKarnesi, PUAN_ESNEKLIK } from './puan.js';
+import { tabanPuanTam, tabanYazi, revioKarnesi, dersNotlari, dersYazi, PUAN_ESNEKLIK } from './puan.js';
+import { yedekSatiri } from './rules.js';
 import { totoProgrami, totoAnaliz, totoAnalizYazi, totoDogrula, totoKaydet, totoKuponlari, totoKuponYazi } from '../toto.js';
 import { bagimsizModel, bagimsizYazi, bagimsizHarita } from '../veri/bagimsiz.js';
 import { altUstModeli, altUstYazi } from '../veri/istatistik.js';
@@ -179,7 +180,7 @@ export function buildHandlers(ctx = {}) {
       desc: 'Kupon ajanları içindir (token tasarrufu): senin kurallarına (seçim başına oran aralığı, bahis türü, verili lig, Nikah Dairesi çelişki kuralı) uyan en iyi adayları değere göre sıralı, oran modeli ve bağımsız modelle birlikte tek tabloda verir. İşe bununla başla.',
       shape: { ajan: z.enum(KUPON_AJAN_ENUM).describe('Senin kimliğin'), tarih: TARIH, adet: z.number().int().min(5).max(30).optional().describe('Varsayılan ayardaki aday sayısı (15)') },
       readOnly: true,
-      run: async ({ ajan, tarih, adet }) => text(adayYazi(ajan, await adayPaketi(ajan, hedefTarih(tarih), { adet }))),
+      run: async ({ ajan, tarih, adet }) => text([adayYazi(ajan, await adayPaketi(ajan, hedefTarih(tarih), { adet })), dersYazi(dersNotlari({ ajan }))].filter(Boolean).join('\n\n')),
     },
 
     alt_ust_analiz: {
@@ -251,7 +252,7 @@ export function buildHandlers(ctx = {}) {
       desc: 'Hakan Revio içindir: kendi geçmişin – verdiğin puanların dağılımı, puana göre tutan kupon sayısı ve "değiştirilmeli" işaretlediğin maçların tutma oranı. Puanlamaya başlamadan önce bir kez çağır.',
       shape: {},
       readOnly: true,
-      run: async () => text(revioKarnesi()),
+      run: async () => text([revioKarnesi(), dersYazi(dersNotlari())].filter(Boolean).join('\n\n')),
     },
 
     tutma_karnesi: {
@@ -353,7 +354,8 @@ export function buildHandlers(ctx = {}) {
         if (!ks.length) return text('Aktif kupon yok.');
         const s = getSettings();
         const gunler = [...new Set(ks.map(k => k.tarih))];
-        return text(ks.map(k => `[${k.tarih}] ` + couponText(k) + `\n  ${tabanYazi(tabanPuan(k))}`).join('\n\n') + `\n\nGünlük toplam: ${gunler.map(g => `${g}: ${dailyTotal(g)}`).join(', ')} / ${s.gunlukButce} TL`);
+        const tabanlar = await Promise.all(ks.map(k => tabanPuanTam(k)));
+        return text(ks.map((k, i) => `[${k.tarih}] ` + couponText(k) + `\n  ${tabanYazi(tabanlar[i])}`).join('\n\n') + `\n\nGünlük toplam: ${gunler.map(g => `${g}: ${dailyTotal(g)}`).join(', ')} / ${s.gunlukButce} TL`);
       },
     },
 
@@ -372,16 +374,28 @@ export function buildHandlers(ctx = {}) {
         if (!k) return text(`#${kupon_id} bulunamadı.`, true);
         if (k.durum !== 'aktif') return text(`#${kupon_id} aktif değil (${k.durum}).`, true);
         // Puan cetveli: taban puan kodla hesaplanır, Revio en fazla ±2 oynatabilir
-        const t = tabanPuan(k);
+        const t = await tabanPuanTam(k);
         if (Math.abs(puan - t.puan) > PUAN_ESNEKLIK) {
           return text(`#${kupon_id} için puan ${puan} kabul edilmedi. ${tabanYazi(t)}. Taban puandan sapman en fazla ${PUAN_ESNEKLIK}; daha fazlası gerekiyorsa gerekçeni eleştiriye yaz ve sınırdaki puanı ver.`, true);
         }
         const gecerli = degistirilmeli.filter(c => k.secimler.some(s => s.mac_kodu === String(c)));
         db.prepare('UPDATE kuponlar SET puan = ?, taban_puan = ?, elestiri = ?, degistirilmeli = ?, lehte = ?, aleyhte = ? WHERE id = ?')
           .run(puan, t.puan, elestiri, JSON.stringify(gecerli), lehte ?? null, aleyhte ?? null, kupon_id);
+        // Değiştirilmeli maçlar için yedek: aynı ajanın kurallarına uyan, kuponda olmayan en iyi 3 aday (revizyonda bülten yeniden taranmasın)
+        let yedekYazi = '';
+        if (gecerli.length && KUPON_AJANLARI.includes(k.ajan)) {
+          try {
+            const pk = await adayPaketi(k.ajan, k.tarih, { adet: 12 });
+            const kupondaki = new Set(k.secimler.map(s => String(s.mac_kodu)));
+            const yedekler = (pk.adaylar ?? []).filter(x => !kupondaki.has(String(x.m.mac_kodu))).slice(0, 3)
+              .map(x => ({ mac_kodu: x.m.mac_kodu, mac_adi: `${x.m.ev} - ${x.m.deplasman}`, saat: x.m.saat, bahis: x.o.bahis, secim: x.o.secim, oran: x.o.oran, model: x.md.model, deger: x.md.deger, bag: x.bag }));
+            db.prepare('UPDATE kuponlar SET yedekler = ? WHERE id = ?').run(yedekler.length ? JSON.stringify(yedekler) : null, kupon_id);
+            if (yedekler.length) yedekYazi = `\nYedek öneriler (revizyon için, ${k.ajan} kurallarına uygun): ${yedekler.map(yedekSatiri).join(' · ')}`;
+          } catch { /* yedek bulunamadı */ }
+        }
         emit('puan', { kupon: getCoupon(kupon_id), oturum_id: oid() });
         emit('ajan_durum', { ajan: 'cok-bilen-kardes', durum: `#${kupon_id} → ${puan}/10` });
-        return text(`#${kupon_id} puanlandı: ${puan}/10.`);
+        return text(`#${kupon_id} puanlandı: ${puan}/10.${yedekYazi}`);
       },
     },
 

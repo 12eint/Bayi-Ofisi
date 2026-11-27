@@ -6,7 +6,7 @@ import { gunBulteni, listMatches, varsayilanGun } from '../bulletin/store.js';
 import { refreshBulletin } from '../bulletin/index.js';
 import { buildHandlers } from './handlers.js';
 import { listCoupons, getCoupon } from './rules.js';
-import { tabanPuan } from './puan.js';
+import { tabanPuanTam } from './puan.js';
 import { emit } from '../events.js';
 
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
@@ -106,7 +106,7 @@ async function critic(h, oturumId) {
     const zayif = [...k.secimler].sort((a, b) => b.oran - a.oran)[0];
     const ayniLig = k.secimler.length - new Set(k.secimler.map(s => s.lig)).size;
     // Puan cetveli: taban puan ±1 (aynı ligden çok seçim −1, revizyon +1)
-    const taban = tabanPuan(k).puan;
+    const taban = (await tabanPuanTam(k)).puan;
     const puan = Math.max(1, Math.min(10, taban - (ayniLig > 1 ? 1 : 0) + (k.revize_of ? 1 : 0)));
     const isaret = puan < 5 ? [zayif.mac_kodu] : [];
     await h.kupon_puanla.run({

@@ -49,7 +49,7 @@ KUPON HAZIRLAMA İŞ AKIŞI (patron kupon istediğinde):
    Çekim başarısızsa (bot koruması, hız limiti, hata) DUR ve patrona durumu bildirip "Bülteni Yükle" yedek yöntemini kullanmasını söyle. Bülten olmadan kupon hazırlatma.
 2. Aktif kupon ajanlarını AYNI MESAJDA paralel olarak Agent aracıyla çağır ve HEPSİNİN raporunu BEKLE. Her birine görevde şunları yaz: hedef gün (YYYY-MM-DD), patronun talimatı (örn. lig ağırlığı), kendi aralığı, kaç kupon (1-2) hazırlayacağı.
 3. Kuponlar gelince cok-bilen-kardes'i çağır, hedef günü (YYYY-MM-DD) vererek tüm aktif kuponları puanlamasını iste ve raporunu BEKLE.
-4. Puanı 5'in altında olan ya da "değiştirilmeli" maçı olan kuponlar için ilgili ajanı BİR KEZ daha çağır: kupon no'su, eleştiri ve işaretli maçlarla revize ettir (kupon_teklif_et'te revize_edilen_kupon_id ile). Revize kuponları cok-bilen-kardes'e bir kez daha puanlat. İkinci tur yok.
+4. Puanı 5'in altında olan ya da "değiştirilmeli" maçı olan kuponlar için ilgili ajanı BİR KEZ daha çağır: kupon no'su, eleştiri ve işaretli maçlarla revize ettir (kupon_teklif_et'te revize_edilen_kupon_id ile). Kuponun altında "Yedek öneriler" varsa ajana söyle: işaretli maçların yerine öncelikle bu yedeklerden seçsin, bülteni yeniden taramasın. Revize kuponları cok-bilen-kardes'e bir kez daha puanlat. İkinci tur yok.
 5. mcp__bayi__kuponlari_getir ile son durumu al ve patrona FİNAL RAPOR ver (Markdown; başlıkta maç gününü yaz):
    - Her kupon: no, ajan, maç sayısı, toplam oran, tutar, olası kazanç, risk, Hakan Revio puanı, eleştiri özeti (1 cümle), varsa Nikah Dairesi (risk kurulu) uyarıları (kısa)
    - Toplam harcanan tutar / günlük bütçe

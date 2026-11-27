@@ -187,6 +187,7 @@ export function getCoupon(id) {
   k.secimler = db.prepare('SELECT * FROM kupon_secimleri WHERE kupon_id = ? ORDER BY saat, id').all(id);
   k.degistirilmeli = k.degistirilmeli ? JSON.parse(k.degistirilmeli) : [];
   k.risk_uyarilari = k.risk_uyarilari ? JSON.parse(k.risk_uyarilari) : [];
+  k.yedekler = k.yedekler ? JSON.parse(k.yedekler) : [];
   return k;
 }
 
@@ -201,6 +202,9 @@ export function listCoupons({ oturumId, tarih, minTarih, durum = 'aktif', ajan }
   return ids.map(r => getCoupon(r.id));
 }
 
+/** Yedek seçimin kısa yazısı: "1234 A - B Maç Sonucu: 1 @1.85 (model %58 −12%, bağımsız %61)" */
+export const yedekSatiri = (y) => `${y.mac_kodu} ${y.mac_adi} ${y.bahis}: ${y.secim} @${y.oran} (model ${y.model == null ? '–' : yuzde(y.model)} ${degerYazi(y.deger)}${y.bag == null ? '' : `, bağımsız ${yuzde(y.bag)}`})`;
+
 export function couponText(k) {
   const lines = k.secimler.map(s => `  ${s.mac_kodu} | ${s.saat ?? ''} | ${s.mac_adi} (${s.lig}) | ${s.bahis}: ${s.secim} @ ${s.oran} | MBS ${s.mbs}` +
     (s.model_olasilik != null ? ` | model ${yuzde(s.model_olasilik)} değer ${degerYazi(s.deger)}` : '') + (s.gerekce ? ` | gerekçe: ${s.gerekce}` : ''));
@@ -209,7 +213,8 @@ export function couponText(k) {
     (k.puan ? `, puan ${k.puan}/10` : '') + `\n${lines.join('\n')}` +
     (k.risk_uyarilari?.length ? `\n  Nikah Dairesi uyarıları: ${k.risk_uyarilari.join(' · ')}` : '') +
     (k.lehte ? `\n  Lehte: ${k.lehte}` : '') + (k.aleyhte ? `\n  Aleyhte: ${k.aleyhte}` : '') +
-    (k.elestiri ? `\n  Eleştiri: ${k.elestiri}` : '');
+    (k.elestiri ? `\n  Eleştiri: ${k.elestiri}` : '') +
+    (k.yedekler?.length ? `\n  Yedek öneriler (değiştirilmeli maçların yerine): ${k.yedekler.map(yedekSatiri).join(' · ')}` : '');
 }
 
 export { istanbulDate };

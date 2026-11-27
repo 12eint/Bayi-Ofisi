@@ -63,12 +63,17 @@
         <div id="isoOfis" class="iso-ofis" hidden></div>
         <div id="ofis3d" class="ofis3d" hidden></div>
 
-        <h2 class="bolum-baslik">Fişler <small id="fisOzet"></small></h2>
+        <h2 class="bolum-baslik">Fişler <small id="fisOzet"></small>
+          <button type="button" class="btn kucuk toplu-indir" data-toplu="fis" title="Seçili sekmedeki fişlerin hepsi, her fiş ayrı sayfada">Toplu indir (PDF)</button>
+        </h2>
         <div id="fisSekmeler" class="fis-sekmeler" role="tablist" aria-label="Fişleri ajana göre filtrele"></div>
         <div id="fisler" class="fisler"><p class="bos">Henüz fiş yok. Sağdaki panelden Harambe'ye talimat ver.</p></div>
 
-        <h2 class="bolum-baslik">Spor Toto <small id="totoOzet"></small></h2>
-        <div id="toto" class="toto"><p class="bos">Yükleniyor…</p></div>
+        <details id="totoKutu" class="acilir-bolum">
+          <summary class="bolum-baslik">Spor Toto <small id="totoOzet"></small></summary>
+          <div class="acilir-arac"><button type="button" class="btn kucuk toplu-indir" data-toplu="toto" title="Bu dönemin Spor Toto önerileri, her biri ayrı sayfada">Toplu indir (PDF)</button></div>
+          <div id="toto" class="toto"><p class="bos">Yükleniyor…</p></div>
+        </details>
       </section>
 
       <!-- ============ BÜLTEN ============ -->

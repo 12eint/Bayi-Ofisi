@@ -383,7 +383,24 @@ kbd { background: #eee; border: 1px solid #ccc; border-radius: 3px; padding: 0 4
   .fis-pencere[open] { position: absolute; inset: 0; margin: 0; max-height: none; animation: none; }
   .fis-pencere::backdrop { background: none; }
   .fis-pencere-ic { max-height: none; overflow: visible; }
+  /* toplu indirme: yalnızca toplu kap basılır, her fiş ayrı sayfa */
+  body.toplu-baski > *:not(#topluBaski) { display: none !important; }
+  body.toplu-baski #topluBaski, body.toplu-baski #topluBaski * { visibility: visible; }
+  .toplu-sayfa { break-after: page; page-break-after: always; break-inside: avoid; }
+  .toplu-sayfa:last-child { break-after: auto; page-break-after: auto; }
+  .toplu-sayfa .fis, .toplu-sayfa .toto-fis { box-shadow: none; -webkit-mask: none; mask: none; margin: 0 auto; }
 }
+#topluBaski { display: none; }
+body.toplu-baski #topluBaski { display: block; }
+@media screen { body.toplu-baski #topluBaski { display: none; } }
+
+/* açılır kapanır bölüm (Spor Toto) */
+.acilir-bolum > summary { cursor: pointer; list-style: none; }
+.acilir-bolum > summary::-webkit-details-marker { display: none; }
+.acilir-bolum > summary::before { content: '▸'; display: inline-block; width: 1em; transition: transform .15s; }
+.acilir-bolum[open] > summary::before { transform: rotate(90deg); }
+.acilir-arac { display: flex; justify-content: flex-end; margin: -4px 0 10px; }
+.bolum-baslik .toplu-indir { margin-left: auto; }
 .liste tr.toplam-satir td { border-top: 2px solid #554a40; background: rgba(255,204,0,.06); }
 
 /* ---------- Spor Toto fişi ---------- */

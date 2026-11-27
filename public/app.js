@@ -424,6 +424,38 @@ document.addEventListener('click', async (e) => {
   }
 });
 
+/* Toplu indirme: görünen fişlerin hepsi tek PDF'te, her fiş ayrı sayfada (yazdır penceresinde "PDF olarak kaydet") */
+function topluYazdir(html) {
+  const kap = document.createElement('div'); kap.id = 'topluBaski'; kap.innerHTML = html;
+  document.body.appendChild(kap); document.body.classList.add('toplu-baski');
+  const temizle = () => { kap.remove(); document.body.classList.remove('toplu-baski'); window.removeEventListener('afterprint', temizle); };
+  window.addEventListener('afterprint', temizle);
+  window.print();
+  setTimeout(temizle, 1000);   // afterprint gelmeyen tarayıcılar için
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-toplu]'); if (!b) return;
+  if (b.dataset.toplu === 'fis') {
+    const ks = S.kuponlar.filter(k => fisSekme === 'hepsi' || k.ajan === fisSekme)
+      .sort((a, c) => a.tarih.localeCompare(c.tarih) || a.id - c.id);
+    if (!ks.length) return alert('İndirilecek fiş yok.');
+    topluYazdir(ks.map(k => `<div class="toplu-sayfa">${fisHtml(k).replace(/ id="fis-\d+"/, '')}</div>`).join(''));
+  } else {
+    const fisler = $$('#toto .toto-fis');
+    if (!fisler.length) return alert('İndirilecek Spor Toto önerisi yok.');
+    topluYazdir(fisler.map(f => `<div class="toplu-sayfa">${f.outerHTML}</div>`).join(''));
+  }
+});
+
+/* Spor Toto bölümü açılır kapanır; durum tarayıcıda hatırlanır */
+{
+  const d = $('#totoKutu');
+  if (d) {
+    try { d.open = localStorage.getItem('totoAcik') === '1'; } catch { /* depolama kapalı olabilir */ }
+    d.addEventListener('toggle', () => { try { localStorage.setItem('totoAcik', d.open ? '1' : '0'); } catch { /* yok say */ } });
+  }
+}
+
 /* ---------------- Sohbet ---------------- */
 function md(t) {
   // küçük ve güvenli markdown: önce kaçış, sonra biçim
